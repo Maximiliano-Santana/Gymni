@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  # Solo la base de datos
+  postgres:
+    image: postgres:15-alpine
+    container_name: gymni-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: gymni
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persiste los datos aunque borres el container
+      - postgres_data:/var/lib/postgresql/data
+      # Opcional: scripts de inicialización
+      - ./init-db:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres_data:
