@@ -12,11 +12,7 @@ export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
   colors: {
     // Colores que coinciden con tu CSS actual
     primary: "#5e08b4",      // Tu primary actual
-    primaryL: "#8040c0",
-    primaryD: "#3d007a",
     secondary: "#ac59ff",    // Tu secondary actual  
-    secondaryL: "#c892ff",
-    secondaryD: "#8829e7",
     accent: "#8040c0",       // Para variantes
     
     success: "#2db224",      // Tu success actual
@@ -24,7 +20,7 @@ export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
     
     background: {
       primary: "#ffffff",    // --background
-      secondary: "#f6f6f6",  // Base para generar grays
+      secondary: "#545454",  // Base para generar grays
       card: "#ffffff",       // --card
     },
     
@@ -40,11 +36,11 @@ export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
     },
   },
   
-  typography: {
-    fontFamily: {
-      primary: "Inter, system-ui, sans-serif",
-    },
-  },
+  // typography: {
+  //   fontFamily: {
+  //     primary: "Inter, system-ui, sans-serif",
+  //   },
+  // },
   
   layout: {
     borderRadius: {
@@ -55,3 +51,4 @@ export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
   
   assets: {},
 };
+

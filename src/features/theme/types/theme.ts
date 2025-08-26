@@ -10,11 +10,7 @@ export interface ThemeManifest {
   colors: {
     // Colores principales
     primary: string;      // --primary
-    primaryL: string;
-    primaryD: string;
     secondary: string;    // --secondary
-    secondaryL: string;
-    secondaryD: string;
     accent: string;       // Para variantes
     
     // Status colors
@@ -39,12 +35,12 @@ export interface ThemeManifest {
     };
   };
   
-  typography: {
-    fontFamily: {
-      primary: string;
-      secondary?: string;
-    };
-  };
+  // typography: {
+  //   fontFamily: {
+  //     primary: string;
+  //     secondary?: string;
+  //   };
+  // };
   
   layout: {
     borderRadius: {

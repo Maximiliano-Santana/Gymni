@@ -83,33 +83,3 @@ export async function GET(request: NextRequest) {
     });
   }
 }
-
-// Opcional: Pregenerar CSS para mejor performance
-export async function POST(request: NextRequest) {
-  try {
-    const { tenantId, themeManifest } = await request.json();
-    
-    // Validar que el usuario puede actualizar este tenant
-    // TODO: Agregar autenticación/autorización
-    
-    // Actualizar tema en BD
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        themeManifest: themeManifest,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Opcionalmente, invalidar cache en CDN
-    // TODO: Implementar invalidación de cache
-    
-    return NextResponse.json({ success: true });
-    
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to update theme' },
-      { status: 500 }
-    );
-  }
-}

@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   if (process.env.NODE_ENV === 'development' && subdomain === 'localhost') {
     console.log(`Set mocked dev-gym`)
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-tenant-subdomain', 'dev-gym'); // Tenant mock para desarrollo
+    requestHeaders.set('x-tenant-subdomain', 'dev-gym'); 
     
     return NextResponse.next({
       request: { headers: requestHeaders }

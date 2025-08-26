@@ -5,7 +5,14 @@ import { ThemeManifest } from "../types/theme";
  * Genera CSS completo basado en tu estructura global actual
  */
 export function generateTenantCSS(theme: ThemeManifest | null): string {
-  const manifest = theme || DEFAULT_THEME_MANIFEST;
+
+  // Se mergean manifests para tener fallbacks
+  const manifest = {
+    ...DEFAULT_THEME_MANIFEST,
+    ...theme,
+    colors: { ...DEFAULT_THEME_MANIFEST.colors, ...theme?.colors },
+    layout: { ...DEFAULT_THEME_MANIFEST.layout, ...theme?.layout },
+  };
 
   // Calcular colores derivados automáticamente
   const primaryColors = generateColorVariants(manifest.colors.primary);
