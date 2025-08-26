@@ -31,7 +31,7 @@ export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
     },
     
     border: {
-      default: "#dee3e7",    // Tu --gray actual
+      default: "#545454",    // Tu --gray actual
       focus: "#ac9ff0",      // Tu --primary-focus actual
     },
   },

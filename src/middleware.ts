@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
     console.log(`Set mocked dev-gym`)
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-tenant-subdomain', 'dev-gym'); 
+    // requestHeaders.set('x-tenant-subdomain', 'tigerdragon'); 
     
     return NextResponse.next({
       request: { headers: requestHeaders }

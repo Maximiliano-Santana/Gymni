@@ -74,7 +74,7 @@ export function generateTenantCSS(theme: ThemeManifest | null): string {
   --accent-foreground: ${manifest.colors.primary};
   --destructive: ${manifest.colors.warning};
   --border: ${grayColors.base};
-  --input: ${manifest.colors.background.primary};
+  --input: ${manifest.colors.border.focus};
   --ring: ${primaryColors.focus};
   
   /* Chart colors - Mantener por compatibilidad */
