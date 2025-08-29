@@ -1,9 +1,9 @@
-import prisma from '@/lib/prisma';
+import db from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
 // Handle GET requests
 export async function GET(request: Request) {
-    const users = await prisma.user.findMany();
+    const users = await db.user.findMany();
     return NextResponse.json(users);
 }
 

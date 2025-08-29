@@ -1,4 +1,3 @@
-import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,12 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import RegisterForm from "@/features/auth/components/RegisterForm";
+import db from "@/lib/prisma";
 
 export default async function RegisterPage() {
   const headerList = await headers();
   const subdomain = headerList.get("x-tenant-subdomain") || "dev-gym";
 
-  const tenant = await prisma.tenant.findUnique({
+  const tenant = await db.tenant.findUnique({
     where: {
       subdomain: subdomain,
     },

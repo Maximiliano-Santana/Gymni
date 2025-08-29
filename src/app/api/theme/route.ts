@@ -1,7 +1,7 @@
 // app/api/theme.css/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { ThemeManifest } from '../../../features/theme/types/theme';
-import prisma from '@/lib/prisma';
+import { db } from '@/lib/prisma';
 import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/theme/api';
 
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Caso 2: Buscar tenant real
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await db.tenant.findUnique({
       where: { subdomain: tenantSubdomain },
       select: {
         id: true,
