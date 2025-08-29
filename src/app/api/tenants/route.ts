@@ -1,9 +1,9 @@
-import prisma from "@/lib/prisma";
+import db from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 // Handle GET requests
 export async function GET(request: Request) {
-  const tenants = await prisma.tenant.findMany();
+  const tenants = await db.tenant.findMany();
   return NextResponse.json(tenants);
 }
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // crear tenant en la DB
-    const tenant = await prisma.tenant.create({
+    const tenant = await db.tenant.create({
       data: {
         name: body.name,
         subdomain: body.subdomain,
