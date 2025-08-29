@@ -6,12 +6,9 @@ import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { email, z } from "zod";
 import { RegisterDTO, RegisterSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
-import { api, ApiError } from "@/lib/axios";
 import { register } from "../lib/api";
-import { FieldErrors } from "../../../lib/axios";
 
 export default function RegisterForm() {
   const form = useForm<RegisterDTO>({

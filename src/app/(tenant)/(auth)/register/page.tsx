@@ -13,14 +13,15 @@ import RegisterForm from "@/features/auth/components/RegisterForm";
 import db from "@/lib/prisma";
 
 export default async function RegisterPage() {
-  const headerList = await headers();
-  const subdomain = headerList.get("x-tenant-subdomain") || "dev-gym";
+  // const headerList = await headers();
+  // const subdomain = headerList.get("x-tenant-subdomain") || "dev-gym";
 
-  const tenant = await db.tenant.findUnique({
-    where: {
-      subdomain: subdomain,
-    },
-  });
+  // const tenant = await db.tenant.findUnique({
+  //   where: {
+  //     subdomain: subdomain,
+  //   },
+  // });
+  const tenant = {name: "Dev-Gym"}
 
   return (
     <>
