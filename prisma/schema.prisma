@@ -23,6 +23,8 @@ model Tenant {
   address String
   subdomain String @unique
   settings Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
   users TenantUser[]
   @@map("tenants")
 }
