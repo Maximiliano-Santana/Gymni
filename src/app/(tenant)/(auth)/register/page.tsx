@@ -1,7 +1,4 @@
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -11,17 +8,23 @@ import {
 } from "@/components/ui/card";
 import RegisterForm from "@/features/auth/components/RegisterForm";
 import db from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 export default async function RegisterPage() {
-  // const headerList = await headers();
-  // const subdomain = headerList.get("x-tenant-subdomain") || "dev-gym";
+  const headerList = await headers();
+  const subdomain = headerList.get("x-tenant-subdomain");
+  let tenant
 
-  // const tenant = await db.tenant.findUnique({
-  //   where: {
-  //     subdomain: subdomain,
-  //   },
-  // });
-  const tenant = {name: "Dev-Gym"}
+  if (subdomain) {
+    tenant = await db.tenant.findUnique({
+      where: {
+        subdomain: subdomain,
+      },
+    });
+    if (tenant == null) {
+      redirect(`/tenant/cta?subdomain=${subdomain}`);
+    }
+  }
 
   return (
     <>
@@ -30,12 +33,12 @@ export default async function RegisterPage() {
           <CardTitle className="text-center">
             <h1>Register</h1>
             <CardDescription>
-              <h2>{tenant?.name}</h2>
+              <h2>{tenant?.name || "Gym&i"} </h2>
             </CardDescription>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RegisterForm />
+          <RegisterForm tenantId={tenant?.id} />
         </CardContent>
       </Card>
     </>

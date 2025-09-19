@@ -6,20 +6,21 @@ import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { RegisterDTO, RegisterSchema } from "../types/forms";
+import { LoginDTO, LoginSchema, RegisterDTO, RegisterSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
-import { register } from "../lib/api";
+import { signIn } from 'next-auth/react'
 import { useEffect } from "react";
+import { email } from 'zod';
+import { redirect } from "next/navigation";
 
-export default function RegisterForm({
+export default function LoginForm({
   tenantId = "",
 }: {
   tenantId: string | undefined;
 }) {
-  const form = useForm<RegisterDTO>({
-    resolver: zodResolver(RegisterSchema),
+  const form = useForm<LoginDTO>({
+    resolver: zodResolver(LoginSchema),
     defaultValues: {
-      name: "",
       email: "",
       password: "",
       tenantId: tenantId
@@ -28,14 +29,21 @@ export default function RegisterForm({
 
   useEffect(()=>{console.log(tenantId)},[])
 
-  async function onSubmit(values: RegisterDTO) {
+  async function onSubmit(values: LoginDTO) {
     console.log(values);
-    try {
-      const res = await register(values);
-      console.log(res);
-    } catch (e: any) {
-      console.log(e.message);
+    const res = await signIn('credentials', {
+        email: values.email,
+        password: values.password,
+        redirect: false
+    })
+
+    if(res && res.error){
+        alert(res.error);
+    }else{
+        redirect("/dashboard")
     }
+
+    console.log(res);
   }
   return (
     <>
@@ -45,23 +53,6 @@ export default function RegisterForm({
           className="flex justify-center items-center flex-col"
         >
           <div className="w-46 flex flex-col items-center gap-4">
-            <div>
-              <Label>Nombre</Label>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field, fieldState }) => (
-                  <>
-                    <Input type="text" placeholder="John Doe" {...field} />
-                    {fieldState.error && (
-                      <span className="text-red-500">
-                        {fieldState.error.message}
-                      </span>
-                    )}
-                  </>
-                )}
-              />
-            </div>
             <div>
               <Label>Correo</Label>
               <FormField

@@ -18,11 +18,12 @@ datasource db {
 // ===============================
 
 model Tenant {
-  id String @id @default(uuid())
+  id String @id @default(cuid())
   name String
   address String
+  subdomain String @unique
+  settings Json
   users TenantUser[]
-  roles Role[]
   @@map("tenants")
 }
 
@@ -31,43 +32,35 @@ model Tenant {
 // ===============================
 
 model User {
-  id String @id @default(uuid())
-  name String
+  id String @id @default(cuid())
   email String @unique
-  password String
-  phone String? 
+  password String 
+  name String
   tenantUsers TenantUser[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
   @@map("users")
 }
 
 model TenantUser {
   id String @id @default(cuid())
-  user User @relation(fields: [userId], references: [id])
+  
   userId String
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
   tenantId String
-  roles TenantUserRole[]
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  role String
+  status String
+
+  @@unique([userId, tenantId])
 }
 
 // ===============================
 // Roles
 // ===============================
 
-model Role {
-  id String @id @default(cuid())
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
-  tenantId String?
-  role TenantUserRole[]
-}
-
-model TenantUserRole {
-  tenantUser TenantUser @relation(fields: [tenantUserId], references: [id])
-  tenantUserId String
-  role Role @relation(fields: [roleId], references: [id])
-  roleId String
-  @@id([tenantUserId, roleId])
-
-}
 
 // ===============================
 // Auth

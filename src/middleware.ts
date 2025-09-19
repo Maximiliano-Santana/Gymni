@@ -1,39 +1,42 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "next-auth/middleware";
 
-export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
-  
-  // ✅ Manejar localhost:3000 correctamente
-  const subdomain = hostname.split('.')[0].split(':')[0]; // Remover puerto
-  
-  console.log(`🚀 Middleware: ${hostname} → ${subdomain}`);
-  
-  // En desarrollo, localhost no es un subdomain válido
-  if (process.env.NODE_ENV === 'development' && subdomain === 'localhost') {
-    console.log(`Set mocked dev-gym`)
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-tenant-subdomain', 'dev-gym'); 
-    // requestHeaders.set('x-tenant-subdomain', 'tigerdragon'); 
-    
-    return NextResponse.next({
-      request: { headers: requestHeaders }
-    });
-  }
-  
-  // Producción: validar subdomain real
-  if (!subdomain || subdomain === 'www') {
-    return NextResponse.redirect(new URL('/not-found', request.url));
+function tenantMiddleware(req: NextRequest) {
+  const hostname = req.headers.get("host") || "";
+  const subdomain = hostname.split(".")[0].split(":")[0];
+
+  const requestHeaders = new Headers(req.headers);
+
+  if (process.env.NODE_ENV === "development" && subdomain === "localhost") {
+    requestHeaders.set("x-tenant-subdomain", "dev-gym");
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-tenant-subdomain', subdomain);
-  
-  return NextResponse.next({
-    request: { headers: requestHeaders }
-  });
+  if (!subdomain || subdomain === "www") {
+    return NextResponse.redirect(new URL("/not-found", req.url));
+  }
+
+  requestHeaders.set("x-tenant-subdomain", subdomain);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
+// Wrap con NextAuth (protege rutas)
+export default withAuth(
+  function middleware(req) {
+    
+    return tenantMiddleware(req);
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token, // 🔒 require sesión para rutas protegidas
+    },
+  }
+);
+
+// Config matcher: decide qué rutas llevan auth + multi-tenant
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    "/dashboard/:path*",  // 🔒 dashboard protegido
+  ],
 };
