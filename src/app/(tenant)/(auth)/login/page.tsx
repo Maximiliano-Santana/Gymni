@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import db from "@/lib/prisma";
 import LoginForm from "@/features/auth/components/LoginForm";
 
@@ -20,9 +20,10 @@ export default async function LoginPage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-center">
-            Login
-          </CardTitle>
+          <CardTitle className="text-center">Login</CardTitle>
+          <CardDescription>
+            <h2 className="text-center">{tenant?.name || "Gym&i"} </h2>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm tenantId={tenant?.id} />

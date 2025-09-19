@@ -1,42 +1,53 @@
 // src/middleware.ts
-import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
+import { NextRequest, NextResponse } from "next/server";
 
-function tenantMiddleware(req: NextRequest) {
-  const hostname = req.headers.get("host") || "";
-  const subdomain = hostname.split(".")[0].split(":")[0];
+const isProtected = (p: string) =>
+  p.startsWith("/dashboard") || p.startsWith("/api/protected");
 
-  const requestHeaders = new Headers(req.headers);
-
-  if (process.env.NODE_ENV === "development" && subdomain === "localhost") {
-    requestHeaders.set("x-tenant-subdomain", "dev-gym");
-    return NextResponse.next({ request: { headers: requestHeaders } });
+function computeSubdomain(hostname: string) {
+  const host = hostname.split(":")[0];
+  const sub = host.split(".")[0];
+  if (process.env.NODE_ENV === "development" && (sub === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host))) {
+    return "dev-gym";
   }
-
-  if (!subdomain || subdomain === "www") {
-    return NextResponse.redirect(new URL("/not-found", req.url));
-  }
-
-  requestHeaders.set("x-tenant-subdomain", subdomain);
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  return sub && sub !== "www" ? sub : null;
 }
 
-// Wrap con NextAuth (protege rutas)
 export default withAuth(
-  function middleware(req) {
-    
-    return tenantMiddleware(req);
+  function middleware(req: NextRequest) {
+    const { pathname } = req.nextUrl;
+
+    // ❌ Excluir estáticos sin usar lookaheads
+    if (
+      pathname.startsWith("/_next") ||
+      pathname === "/favicon.ico" ||
+      /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
+    ) {
+      return NextResponse.next();
+    }
+
+    // ✅ Tenancy siempre
+    const sub = computeSubdomain(req.headers.get("host") || "");
+    if (!sub) {
+      return NextResponse.redirect(new URL("/not-found", req.url));
+    }
+
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-tenant-subdomain", sub);
+
+    return NextResponse.next({ request: { headers: requestHeaders } });
   },
   {
+    // Auth solo en rutas protegidas
     callbacks: {
-      authorized: ({ token }) => !!token, // 🔒 require sesión para rutas protegidas
+      authorized: ({ req, token }) => (isProtected(req.nextUrl.pathname) ? !!token : true),
     },
+    pages: { signIn: "/login" },
   }
 );
 
-// Config matcher: decide qué rutas llevan auth + multi-tenant
+// ✅ Matcher simple, sin grupos de captura
 export const config = {
-  matcher: [
-    "/dashboard/:path*",  // 🔒 dashboard protegido
-  ],
+  matcher: ["/:path*"],
 };

@@ -68,8 +68,8 @@ export function generateTenantCSS(theme: ThemeManifest | null): string {
   /* Semantic colors */
   --primary-foreground: ${getContrastColor(manifest.colors.primary)};
   --secondary-foreground: ${manifest.colors.primary};
-  --muted: ${grayColors.g200};
-  --muted-foreground: ${grayColors.g700};
+  --muted: ${grayColors.g500};
+  --muted-foreground: ${grayColors.g200};
   --accent: ${primaryColors.secondary};
   --accent-foreground: ${manifest.colors.primary};
   --destructive: ${manifest.colors.warning};

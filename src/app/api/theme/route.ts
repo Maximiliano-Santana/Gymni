@@ -1,8 +1,8 @@
 // app/api/theme.css/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { ThemeManifest } from '../../../features/theme/types/theme';
-import { db } from '@/lib/prisma';
 import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/theme/api';
+import db from '../../../lib/prisma';
 
 
 export async function GET(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         subdomain: true,
-        themeManifest: true,
+        settings: true,
         updatedAt: true,
       },
     });
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Caso 3: Tenant encontrado, generar CSS personalizado
-    const themeManifest = tenant.themeManifest as ThemeManifest | null;
+    const themeManifest = tenant.settings as ThemeManifest | null;
     const css = generateTenantCSS(themeManifest);
     const etag = generateETag(tenant.id, tenant.updatedAt);
 
