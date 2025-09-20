@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import {
   Card,
   CardContent,
@@ -7,24 +6,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import RegisterForm from "@/features/auth/components/RegisterForm";
-import db from "@/lib/prisma";
-import { redirect } from "next/navigation";
+import { validateTenantSubdomain } from "@/features/tenant/lib";
 
 export default async function RegisterPage() {
-  const headerList = await headers();
-  const subdomain = headerList.get("x-tenant-subdomain");
-  let tenant
-
-  if (subdomain) {
-    tenant = await db.tenant.findUnique({
-      where: {
-        subdomain: subdomain,
-      },
-    });
-    if (tenant == null) {
-      redirect(`/tenant/cta?subdomain=${subdomain}`);
-    }
-  }
+  const tenant = await validateTenantSubdomain();
 
   return (
     <>

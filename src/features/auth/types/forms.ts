@@ -1,6 +1,7 @@
 const passwordRegex =
   /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%&_*+/()?^-])[A-Za-z\d!@#$%&_*+/()?^-]{6,}$/;
 
+import { TenantRole } from "@prisma/client";
 import { email, z } from "zod";
 
 export const RegisterSchema = z.object({
@@ -31,3 +32,11 @@ export const LoginSchema = z.object({
 });
 
 export type LoginDTO = z.infer<typeof LoginSchema>;
+
+export const InvitationSchema = z.object({
+  email: z.string().email("Correo inválido").nonempty("Campo obligatorio"),
+  tenantId: z.string(),
+  role: z.nativeEnum(TenantRole)
+})
+
+export type InvitationDTO = z.infer<typeof InvitationSchema>

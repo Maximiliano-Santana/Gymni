@@ -1,4 +1,4 @@
-import z from "zod";
+import z, { success } from "zod";
 
 export function validateRequest<T>(schema: z.ZodSchema<T>, body: any) {
   const { success, error, data } = schema.safeParse(body);
@@ -15,4 +15,16 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, body: any) {
   }
 
   return { success: true, data };
+}
+
+import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+
+export async function validateSuperAdmin(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return { success: false, message: "Sesion no encontrada" };
+  if (session.user.systemRole !== "SUPER_ADMIN")
+    return { success: false, message: "No tienes permisos para realizar esta acción" };
+  return { success: true, message: "Validación correcta" };
 }

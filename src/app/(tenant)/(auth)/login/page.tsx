@@ -1,20 +1,15 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import db from "@/lib/prisma";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import LoginForm from "@/features/auth/components/LoginForm";
+import { validateTenantSubdomain } from "@/features/tenant/lib";
 
 export default async function LoginPage() {
-  const headerList = await headers();
-  const subdomain = headerList.get("x-tenant-subdomain") || "dev-gym";
-
-  const tenant = await db.tenant.findUnique({
-    where: {
-      subdomain: subdomain,
-    },
-  });
+  const tenant = await validateTenantSubdomain();
 
   return (
     <>
