@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
       if (user) token.systemRole = (user as any).systemRole ?? "USER";
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token, user }) {
       if (session?.user) {
         session.user.id = String(token.sub);
         (session.user as any).systemRole = (token as any).systemRole ?? "USER";

@@ -22,7 +22,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import db from "@/lib/prisma";
 
-export async function validateSuperAdmin(req: NextRequest) {
+export async function validateSuperAdmin() {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, message: "Sesion no encontrada" };
   if (session.user.systemRole !== "SUPER_ADMIN")
@@ -30,20 +30,38 @@ export async function validateSuperAdmin(req: NextRequest) {
   return { success: true, message: "Validación correcta" };
 }
 
-export async function validateTenantAdmin(req: NextRequest, tenantId: string) {
+export async function validateTenantAdmin(tenantId: string) {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, message: "Sesion no encontrada" };
   const tenantUser = await db.tenantUser.findUnique({
     where: {
-      userId_tenantId: { userId: session.user.id, tenantId: tenantId }
+      userId_tenantId: { userId: session.user.id, tenantId }
     }
   })
   if(!tenantUser) return { success: false, message: "Usuario no asignado al Gym" }
   
-  const isAllowed = [ "OWNER", "ADMIN" ].includes(tenantUser.role)
+    const isAllowed = tenantUser.roles?.some((r) => r === "OWNER" || r === "ADMIN")
   if(isAllowed){
     return { success: true, message: "Usuario autorizado" }
   }else{
     return { success: false, message: "Usuario no autorizado" }
   }
+}
+
+export async function  validateTenantStaff(tenantId: string) {
+ const session = await getServerSession(authOptions);
+  if (!session) return { success: false, message: "Sesion no encontrada" };
+  const tenantUser = await db.tenantUser.findUnique({
+    where: {
+      userId_tenantId: { userId: session.user.id, tenantId }
+    }
+  })
+  if(!tenantUser) return { success: false, message: "Usuario no asignado al Gym" }
+  
+    const isAllowed = tenantUser.roles?.some((r) => r === "STAFF" )
+  if(isAllowed){
+    return { success: true, message: "Usuario autorizado" }
+  }else{
+    return { success: false, message: "Usuario no autorizado" }
+  } 
 }

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         data:{
           tenantId: tenant.id,
           userId: user.id,
-          role: invitation.role,
+          roles: [invitation.role],
           status: "ACTIVE"
         }
       })

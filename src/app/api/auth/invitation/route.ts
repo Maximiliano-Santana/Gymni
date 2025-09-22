@@ -8,13 +8,13 @@ import { InvitationDTO, InvitationSchema } from "@/features/auth/types/forms";
 import db from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  const isSuperAdmin = await validateSuperAdmin(req);
+  const isSuperAdmin = await validateSuperAdmin();
   const newInvitation: InvitationDTO = await req.json();
   const validation = validateRequest(InvitationSchema, newInvitation);
   if (!validation.success) {
     return Response.json({ message: "Campos invalidos" }, { status: 400 });
   }
-  const isTenantAdmin = await validateTenantAdmin(req, newInvitation.tenantId);
+  const isTenantAdmin = await validateTenantAdmin(newInvitation.tenantId);
 
   if (!isSuperAdmin.success && !isTenantAdmin.success) {
     return Response.json(
