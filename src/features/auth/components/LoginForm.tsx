@@ -6,45 +6,37 @@ import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { LoginDTO, LoginSchema, RegisterDTO, RegisterSchema } from "../types/forms";
+import {
+  LoginDTO,
+  LoginSchema
+} from "../types/forms";
 import { FormField } from "@/components/ui/form";
-import { signIn } from 'next-auth/react'
-import { useEffect } from "react";
-import { email } from 'zod';
+import { signIn, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
+import type { Tenant } from "@prisma/client";
 
-export default function LoginForm({
-  tenantId = "",
-}: {
-  tenantId: string | undefined;
-}) {
+export default function LoginForm({ tenant }: { tenant: Tenant | null }) {
   const form = useForm<LoginDTO>({
     resolver: zodResolver(LoginSchema),
     defaultValues: {
       email: "",
       password: "",
-      tenantId: tenantId
+      tenantId: tenant?.id || "",
     },
   });
-
-  useEffect(()=>{console.log(tenantId)},[])
+  const { update, data }= useSession();
 
   async function onSubmit(values: LoginDTO) {
-    console.log(values);
-    const res = await signIn('credentials', {
-        email: values.email,
-        password: values.password,
-        redirect: false
-    })
-
-    if(res && res.error){
-        alert(res.error);
-    }else{
-        redirect("/dashboard")
-    }
-
-    console.log(res);
+    const res = await signIn("credentials", { ...values, redirect: false });
+    if(res?.error) return
+    await update({ refreshTenants: true })
+    const roles = data?.user.tenants[tenant?.subdomain] || []
+    const dest = roles.some((r:string)=>["OWNER","ADMIN","STAFF"].includes(r))
+    ? `/admin` : `/dashboard`;
+    redirect(dest);
   }
+
+
   return (
     <>
       <Form {...form}>

@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import db from "@/lib/prisma";
+import { getTenantsBySubdomain } from "../../lib/auth";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -9,7 +10,11 @@ export const authOptions: NextAuthOptions = {
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text", placeholder: "example@example.com" },
+        email: {
+          label: "Email",
+          type: "text",
+          placeholder: "example@example.com",
+        },
         password: { label: "Password", type: "password" },
       },
       async authorize(c, req) {
@@ -17,7 +22,13 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: { email: String(c.email) },
-          select: { id: true, email: true, name: true, password: true, systemRole: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            systemRole: true,
+          },
         });
         if (!user) return null;
 
@@ -36,14 +47,24 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: { signIn: "/login" },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.systemRole = (user as any).systemRole ?? "USER";
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.systemRole = (user as any).systemRole ?? "USER";
+        token.tenants = await getTenantsBySubdomain(user.id);
+      }
+
+      // Permite refrescar tenants desde el cliente: useSession().update({ refreshTenants: true })
+      if (trigger === "update" && (session as any)?.refreshTenants) {
+        const userId = token.sub!;
+        (token as any).tenants = await getTenantsBySubdomain(userId);
+      }
       return token;
     },
     async session({ session, token, user }) {
       if (session?.user) {
         session.user.id = String(token.sub);
         (session.user as any).systemRole = (token as any).systemRole ?? "USER";
+        (session.user as any).tenants = (token as any).tenants ?? {}; // 👈 mapa por subdominio
       }
       return session;
     },

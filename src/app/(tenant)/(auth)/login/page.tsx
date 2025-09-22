@@ -10,6 +10,7 @@ import { validateTenantSubdomain } from "@/features/tenant/lib";
 
 export default async function LoginPage() {
   const tenant = await validateTenantSubdomain();
+  console.log(tenant)
 
   return (
     <>
@@ -21,7 +22,7 @@ export default async function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginForm tenantId={tenant?.id} />
+          <LoginForm tenant={tenant} />
         </CardContent>
       </Card>
     </>
