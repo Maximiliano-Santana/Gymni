@@ -3,7 +3,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 
 
-export default function SuperAdminLayout({ children }: { children: ReactNode }) {
+export default async function SuperAdminLayout({ children }: { children: ReactNode }) {
+
 return (
 <SidebarProvider>
 <AppSidebar />

@@ -60,6 +60,11 @@ enum TenantRole {
   MEMBER
 }
 
+enum TenantUserStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model TenantUser {
   id String @id @default(cuid())
   
@@ -70,7 +75,7 @@ model TenantUser {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   role TenantRole
-  status String
+  status TenantUserStatus @default(ACTIVE)
 
   @@unique([userId, tenantId])
 }
@@ -82,10 +87,9 @@ model Invitation {
   tenantId String
   tenant Tenant @relation(fields: [tenantId], references: [id])
   role TenantRole
-  token String @unique @default(cuid())
 
   expiresAt DateTime
-  usedAt DateTime @default(now())
+  usedAt DateTime?
   @@map("invitations")
 }
 

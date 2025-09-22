@@ -15,6 +15,7 @@ export const RegisterSchema = z.object({
       message: "Debe tener minúscula, número y símbolo (!@#$%&_*+/()?^-)",
     }),
   tenantId: z.string().optional(),
+  invitation: z.string().optional()
 });
 
 export type RegisterDTO = z.infer<typeof RegisterSchema>;

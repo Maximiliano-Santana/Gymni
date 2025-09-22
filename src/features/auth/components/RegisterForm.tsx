@@ -9,24 +9,27 @@ import { useForm } from "react-hook-form";
 import { RegisterDTO, RegisterSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
 import { register } from "../lib/api";
-import { useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 
 export default function RegisterForm({
   tenantId = "",
 }: {
   tenantId: string | undefined;
 }) {
+  const invitation = useSearchParams().get('invitation') || undefined
+
   const form = useForm<RegisterDTO>({
     resolver: zodResolver(RegisterSchema),
     defaultValues: {
       name: "",
       email: "",
       password: "",
-      tenantId: tenantId
+      tenantId: tenantId,
+      invitation: invitation
     },
   });
 
-  useEffect(()=>{console.log(tenantId)},[])
+  // useEffect(()=>{console.log(tenantId)},[])
 
   async function onSubmit(values: RegisterDTO) {
     console.log(values);
