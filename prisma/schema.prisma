@@ -14,32 +14,42 @@ datasource db {
 }
 
 // ===============================
-// Tenants
-// ===============================
-
-model Tenant {
-  id String @id @default(cuid())
-  name String
-  address String
-  subdomain String @unique
-  settings Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
-  users TenantUser[]
-  invitations Invitation[]
-
-  @@map("tenants")
-}
-
-// ===============================
-// Users
+// Tenants & Users 
 // ===============================
 
 enum SystemRole {
   USER
   SUPER_ADMIN
 }
+enum TenantRole {
+  OWNER
+  ADMIN
+  STAFF
+  MEMBER
+}
+enum TenantUserStatus {
+  ACTIVE
+  INACTIVE
+}
 
+// Añade relaciones en Tenant
+model Tenant {
+  id           String @id @default(cuid())
+  name         String
+  address      String
+  subdomain    String @unique
+  settings     Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt @default(now())
+  users        TenantUser[]
+  invitations  Invitation[]
+  // Billing
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  payments      Payment[]
+
+  @@map("tenants")
+}
 
 model User {
   id String @id @default(cuid())
@@ -51,18 +61,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt @default(now())
   @@map("users")
-}
-
-enum TenantRole {
-  OWNER
-  ADMIN
-  STAFF
-  MEMBER
-}
-
-enum TenantUserStatus {
-  ACTIVE
-  INACTIVE
 }
 
 model TenantUser {
@@ -94,41 +92,99 @@ model Invitation {
 }
 
 // ===============================
-// Roles
+// Tenants Payments (Core)
 // ===============================
 
+enum BillingProvider { 
+  MANUAL
+  LEMONSQUEEZY
+  PADDLE
+}
+enum SubStatus { 
+  trialing 
+  active 
+  past_due 
+  canceled 
+}
+enum InvoiceStatus { 
+  open 
+  paid 
+  void 
+  uncollectible
+}
+enum PaymentMethod { 
+  CASH 
+  TRANSFER 
+  CARD 
+  OTHER 
+}
 
-// ===============================
-// Auth
-// ===============================
+model Plan {
+  id             String  @id @default(cuid())
+  code           String  @unique            // STARTER, PRO, SCALE
+  name           String
+  interval       String                     // "month" | "year"
+  priceCents     Int                         // precio base por periodo
+  limits         Json                        // { membersActiveMax: 400, ... }
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt @default(now())
+  subscriptions  Subscription[]
+  @@map("plans")
+}
 
-// model Account {
-//   id                String  @id @default(cuid())
-//   userId            String
-//   type              String
-//   provider          String  // "google", "github", "credentials"
-//   providerAccountId String
-//   refreshToken      String? @db.Text
-//   accessToken       String? @db.Text
-//   expiresAt         Int?
-//   tokenType         String?
-//   scope             String?
-//   idToken           String? @db.Text
-//   sessionState      String?
+model Subscription {
+  id               String  @id @default(cuid())
+  tenantId         String
+  tenant           Tenant  @relation(fields: [tenantId], references: [id])
+  planId           String
+  plan             Plan    @relation(fields: [planId], references: [id])
+  provider         BillingProvider @default(MANUAL)
+  status           SubStatus       @default(trialing)
+  currentPeriodEnd DateTime
+  trialEnd         DateTime?
+  canceledAt       DateTime?
+  providerSubId    String? @unique
+  invoices         Invoice[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt @default(now())
+  @@map("subscriptions")
+}
 
-//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Invoice {
+  id                 String  @id @default(cuid())
+  tenantId           String
+  tenant             Tenant  @relation(fields: [tenantId], references: [id])
+  subscriptionId     String
+  subscription       Subscription @relation(fields: [subscriptionId], references: [id])
+  amountCents        Int
+  currency           String  @default("MXN")
+  status             InvoiceStatus @default(open)
+  issuedAt           DateTime @default(now())
+  dueAt              DateTime?
+  providerInvoiceId  String? @unique
+  notes              String?
+  payments           Payment[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt @default(now())
+  @@map("invoices")
+  @@index([tenantId, status])
+}
 
-//   @@unique([provider, providerAccountId])
-//   @@map("accounts")
-// }
-
-// model Session {
-//   id           String   @id @default(cuid())
-//   sessionToken String   @unique
-//   userId       String
-//   expires      DateTime
-  
-//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-//   @@map("sessions")
-// }
+model Payment {
+  id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+  method      PaymentMethod
+  amountCents Int
+  paidAt      DateTime
+  reference   String?              // folio/nota de transferencia
+  receivedBy  String?              // userId que registró
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+  @@map("payments")
+  @@index([tenantId, paidAt])
+  @@unique([invoiceId, reference]) // evita duplicados por misma referencia
+}
