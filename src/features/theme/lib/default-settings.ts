@@ -1,6 +1,6 @@
-import type { ThemeManifest } from "../types/theme";
+import type { TenantSettings } from "../types/settings";
 
-export const DEFAULT_THEME_MANIFEST: ThemeManifest = {
+export const DEFAULT_THEME_MANIFEST: TenantSettings = {
   version: "1.0.0",
   metadata: {
     name: "Default Gym Theme",

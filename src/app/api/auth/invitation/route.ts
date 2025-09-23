@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Tenant no existe" }, { status: 400 });
   }
 
-  //En caso de que el usuario ya este registrado se crea relacion tenant user
+  // Actualizacion de TenantUser en caso de un usuario ya registrado
   const user = await db.user.findUnique({
     where: { email: newInvitation.email },
   });

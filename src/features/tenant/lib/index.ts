@@ -14,7 +14,7 @@ export async function validateTenantSubdomain() {
       },
     });
     if (tenant == null) {
-      redirect(`/tenant/cta?subdomain=${subdomain}`);
+      redirect(`/tenant-notfound?subdomain=${subdomain}`);
     }
   }
 

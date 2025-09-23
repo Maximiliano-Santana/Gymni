@@ -1,4 +1,4 @@
-export interface ThemeManifest {
+export interface TenantSettings {
   version: string;
   metadata: {
     name: string;

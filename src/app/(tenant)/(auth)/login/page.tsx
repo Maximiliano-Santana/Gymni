@@ -10,7 +10,6 @@ import { validateTenantSubdomain } from "@/features/tenant/lib";
 
 export default async function LoginPage() {
   const tenant = await validateTenantSubdomain();
-  console.log(tenant)
 
   return (
     <>

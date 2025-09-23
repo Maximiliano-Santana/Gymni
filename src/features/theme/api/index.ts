@@ -1,10 +1,10 @@
-import { DEFAULT_THEME_MANIFEST } from "../lib/default-theme";
-import { ThemeManifest } from "../types/theme";
+import { DEFAULT_THEME_MANIFEST } from "../lib/default-settings";
+import { TenantSettings } from "../types/settings";
 
 /**
  * Genera CSS completo basado en tu estructura global actual
  */
-export function generateTenantCSS(theme: ThemeManifest | null): string {
+export function generateTenantCSS(theme: TenantSettings | null): string {
 
   // Se mergean manifests para tener fallbacks
   const manifest = {
