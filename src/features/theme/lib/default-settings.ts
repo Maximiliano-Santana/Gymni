@@ -1,12 +1,10 @@
 import type { TenantSettings } from "../types/settings";
 
-export const DEFAULT_THEME_MANIFEST: TenantSettings = {
+export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
   version: "1.0.0",
   metadata: {
-    name: "Default Gym Theme",
-    description: "Theme por defecto basado en tu CSS global",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    name: "Gym&i",
+    description: "App de gym impulsada por Gym&i",
   },
   
   colors: {
@@ -49,6 +47,7 @@ export const DEFAULT_THEME_MANIFEST: TenantSettings = {
     },
   },
   
-  assets: {},
+  assets: {
+    favicon: "./dev-gym.svg"
+  },
 };
-

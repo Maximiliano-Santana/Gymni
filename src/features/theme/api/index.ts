@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_MANIFEST } from "../lib/default-settings";
+import { DEFAULT_TENANT_SETTINGS } from "../lib/default-settings";
 import { TenantSettings } from "../types/settings";
 
 /**
@@ -8,10 +8,10 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
 
   // Se mergean manifests para tener fallbacks
   const manifest = {
-    ...DEFAULT_THEME_MANIFEST,
+    ...DEFAULT_TENANT_SETTINGS,
     ...theme,
-    colors: { ...DEFAULT_THEME_MANIFEST.colors, ...theme?.colors },
-    layout: { ...DEFAULT_THEME_MANIFEST.layout, ...theme?.layout },
+    colors: { ...DEFAULT_TENANT_SETTINGS.colors, ...theme?.colors },
+    layout: { ...DEFAULT_TENANT_SETTINGS.layout, ...theme?.layout },
   };
 
   // Calcular colores derivados automáticamente

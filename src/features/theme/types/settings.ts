@@ -3,8 +3,6 @@ export interface TenantSettings {
   metadata: {
     name: string;
     description?: string;
-    createdAt: string;
-    updatedAt: string;
   };
   
   colors: {
