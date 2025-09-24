@@ -1,5 +1,12 @@
 import db from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { validateSuperAdmin, validateRequest } from "../lib/validation";
+import {
+  registerTenantDTO,
+  RegisterTenantSchema,
+} from "@/features/tenant/types";
+import { DEFAULT_TENANT_SETTINGS } from "@/features/theme/lib/default-settings";
+import { Prisma } from "@prisma/client";
 
 // Handle GET requests
 export async function GET(request: Request) {
@@ -9,18 +16,51 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const tenant: registerTenantDTO = await request.json();
 
-    // crear tenant en la DB
-    const tenant = await db.tenant.create({
+    const requestValidation = validateRequest(RegisterTenantSchema, tenant);
+    if (!requestValidation.success)
+      return NextResponse.json(
+        { message: "Parámetros inválidos" },
+        { status: 400 }
+      );
+
+    const superValidation = await validateSuperAdmin();
+    if (!superValidation.success)
+      return NextResponse.json(
+        { message: "No tienes permisos para hacer esto." },
+        { status: 401 }
+      );
+
+    //Se valida subdomino unico
+    const existingTenant = await db.tenant.findUnique({
+      where: {
+        subdomain: tenant.subdomain,
+      },
+    });
+    if (existingTenant)
+      return NextResponse.json(
+        { message: "Este subdominio ya está registrado." },
+        { status: 409 }
+      );
+
+    const settings = JSON.parse(
+      JSON.stringify({
+        ...DEFAULT_TENANT_SETTINGS,
+        metadata: { ...DEFAULT_TENANT_SETTINGS.metadata, name: tenant.name },
+      })
+    ) as Prisma.JsonObject;
+
+    await db.tenant.create({
       data: {
-        name: body.name,
-        subdomain: body.subdomain,
-        branding: body.branding
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        address: tenant.address,
+        settings: settings,
       },
     });
 
-    return NextResponse.json({ message: "Tenant creado", tenant });
+    return NextResponse.json({ message: "Tenant creada" }, { status: 200 });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
