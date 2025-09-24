@@ -36,8 +36,8 @@ enum TenantUserStatus {
 model Tenant {
   id           String @id @default(cuid())
   name         String
-  address      String
   subdomain    String @unique
+  address      String
   settings     Json
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt @default(now())
@@ -92,17 +92,16 @@ model Invitation {
 }
 
 // ===============================
-// Tenants Payments (Core)
+// Billing (Tenant ↔ Gymni)
 // ===============================
-
 enum BillingProvider { 
-  MANUAL
-  LEMONSQUEEZY
-  PADDLE
+  MANUAL 
+  LEMONSQUEEZY 
+  PADDLE 
 }
 enum SubStatus { 
   trialing 
-  active 
+  active
   past_due 
   canceled 
 }
@@ -110,27 +109,46 @@ enum InvoiceStatus {
   open 
   paid 
   void 
-  uncollectible
+  uncollectible 
 }
 enum PaymentMethod { 
   CASH 
   TRANSFER 
   CARD 
-  OTHER 
+  OTHER
+}
+enum BillingInterval { 
+  MONTH
+  YEAR
 }
 
 model Plan {
-  id             String  @id @default(cuid())
-  code           String  @unique            // STARTER, PRO, SCALE
-  name           String
-  interval       String                     // "month" | "year"
-  priceCents     Int                         // precio base por periodo
-  limits         Json                        // { membersActiveMax: 400, ... }
-  isActive       Boolean @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt @default(now())
-  subscriptions  Subscription[]
+  id        String  @id @default(cuid())
+  code      String  @unique          // "STARTER", "PRO", "SCALE"
+  name      String
+  limits    Json                    // { membersActiveMax: 400, ... }
+  isActive  Boolean @default(true)
+  prices    PlanPrice[]
+  subscriptions Subscription[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
   @@map("plans")
+}
+
+model PlanPrice {
+  id          String  @id @default(cuid())
+  planId      String
+  plan        Plan    @relation(fields: [planId], references: [id])
+  interval    BillingInterval       // MONTH | YEAR
+  amountCents Int
+  currency    String                // "MXN" | "USD"
+  providerVariantId String?
+  validFrom   DateTime @default(now())
+  validTo     DateTime?
+  isActive    Boolean  @default(true)
+  subscriptions Subscription[]
+  @@map("plan_prices")
+  @@index([planId, interval, currency])
 }
 
 model Subscription {
@@ -139,8 +157,11 @@ model Subscription {
   tenant           Tenant  @relation(fields: [tenantId], references: [id])
   planId           String
   plan             Plan    @relation(fields: [planId], references: [id])
+  priceId          String
+  price            PlanPrice @relation(fields: [priceId], references: [id])
   provider         BillingProvider @default(MANUAL)
   status           SubStatus       @default(trialing)
+  billingInterval  BillingInterval
   currentPeriodEnd DateTime
   trialEnd         DateTime?
   canceledAt       DateTime?
@@ -149,24 +170,27 @@ model Subscription {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt @default(now())
   @@map("subscriptions")
+  @@index([tenantId, status])
 }
 
 model Invoice {
-  id                 String  @id @default(cuid())
-  tenantId           String
-  tenant             Tenant  @relation(fields: [tenantId], references: [id])
-  subscriptionId     String
-  subscription       Subscription @relation(fields: [subscriptionId], references: [id])
-  amountCents        Int
-  currency           String  @default("MXN")
-  status             InvoiceStatus @default(open)
-  issuedAt           DateTime @default(now())
-  dueAt              DateTime?
-  providerInvoiceId  String? @unique
-  notes              String?
-  payments           Payment[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt @default(now())
+  id               String  @id @default(cuid())
+  tenantId         String
+  tenant           Tenant  @relation(fields: [tenantId], references: [id])
+  subscriptionId   String
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id])
+  amountCents      Int
+  currency         String
+  status           InvoiceStatus @default(open)
+  issuedAt         DateTime @default(now())
+  dueAt            DateTime?
+  // snapshots
+  planId           String
+  priceId          String
+  providerInvoiceId String? @unique
+  payments         Payment[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt @default(now())
   @@map("invoices")
   @@index([tenantId, status])
 }
@@ -180,11 +204,11 @@ model Payment {
   method      PaymentMethod
   amountCents Int
   paidAt      DateTime
-  reference   String?              // folio/nota de transferencia
-  receivedBy  String?              // userId que registró
+  reference   String?
+  receivedBy  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt @default(now())
   @@map("payments")
   @@index([tenantId, paidAt])
-  @@unique([invoiceId, reference]) // evita duplicados por misma referencia
+  @@unique([invoiceId, reference]) // evita doble captura por mismo folio
 }
