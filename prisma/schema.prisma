@@ -100,10 +100,8 @@ enum BillingProvider {
   PADDLE 
 }
 enum SubStatus { 
-  trialing 
   active
-  past_due 
-  canceled 
+  canceled
 }
 enum InvoiceStatus { 
   open 
@@ -160,7 +158,7 @@ model Subscription {
   priceId          String
   price            PlanPrice @relation(fields: [priceId], references: [id])
   provider         BillingProvider @default(MANUAL)
-  status           SubStatus       @default(trialing)
+  status           SubStatus       @default(active)
   billingInterval  BillingInterval
   currentPeriodEnd DateTime
   trialEnd         DateTime?

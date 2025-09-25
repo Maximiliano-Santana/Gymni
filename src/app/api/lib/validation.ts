@@ -18,15 +18,20 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, body: any) {
 }
 
 import { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, Session } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import db from "@/lib/prisma";
+import { headers } from "next/headers";
+import { TenantRole } from "@prisma/client";
 
 export async function validateSuperAdmin() {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, message: "Sesion no encontrada" };
   if (session.user.systemRole !== "SUPER_ADMIN")
-    return { success: false, message: "No tienes permisos para realizar esta acción" };
+    return {
+      success: false,
+      message: "No tienes permisos para realizar esta acción",
+    };
   return { success: true, message: "Validación correcta" };
 }
 
@@ -35,33 +40,54 @@ export async function validateTenantAdmin(tenantId: string) {
   if (!session) return { success: false, message: "Sesion no encontrada" };
   const tenantUser = await db.tenantUser.findUnique({
     where: {
-      userId_tenantId: { userId: session.user.id, tenantId }
-    }
-  })
-  if(!tenantUser) return { success: false, message: "Usuario no asignado al Gym" }
-  
-    const isAllowed = tenantUser.roles?.some((r) => r === "OWNER" || r === "ADMIN")
-  if(isAllowed){
-    return { success: true, message: "Usuario autorizado" }
-  }else{
-    return { success: false, message: "Usuario no autorizado" }
+      userId_tenantId: { userId: session.user.id, tenantId },
+    },
+  });
+  if (!tenantUser)
+    return { success: false, message: "Usuario no asignado al Gym" };
+
+  const isAllowed = tenantUser.roles?.some(
+    (r) => r === "OWNER" || r === "ADMIN"
+  );
+  if (isAllowed) {
+    return { success: true, message: "Usuario autorizado" };
+  } else {
+    return { success: false, message: "Usuario no autorizado" };
   }
 }
 
-export async function  validateTenantStaff(tenantId: string) {
- const session = await getServerSession(authOptions);
+export async function validateTenantStaff(tenantId: string) {
+  const session = await getServerSession(authOptions);
   if (!session) return { success: false, message: "Sesion no encontrada" };
   const tenantUser = await db.tenantUser.findUnique({
     where: {
-      userId_tenantId: { userId: session.user.id, tenantId }
-    }
-  })
-  if(!tenantUser) return { success: false, message: "Usuario no asignado al Gym" }
-  
-    const isAllowed = tenantUser.roles?.some((r) => r === "STAFF" )
-  if(isAllowed){
-    return { success: true, message: "Usuario autorizado" }
-  }else{
-    return { success: false, message: "Usuario no autorizado" }
-  } 
+      userId_tenantId: { userId: session.user.id, tenantId },
+    },
+  });
+  if (!tenantUser)
+    return { success: false, message: "Usuario no asignado al Gym" };
+
+  const isAllowed = tenantUser.roles?.some((r) => r === "STAFF");
+  if (isAllowed) {
+    return { success: true, message: "Usuario autorizado" };
+  } else {
+    return { success: false, message: "Usuario no autorizado" };
+  }
+}
+
+export async function requireTenantRoles(
+  needed: TenantRole[]
+) {
+  const sub = (await headers()).get("x-tenant-subdomain")!;
+  const s = await getServerSession(authOptions);
+  if (!s) throw new Error("401");
+  if (s.user.systemRole == "SUPER_ADMIN") {
+    return true
+  };
+
+  const roles = s.user.tenants?.[sub] ?? [];
+  const ok = roles.some((r: TenantRole) => needed.includes(r));
+  if (!ok) throw new Error("403_FORBIDDEN");
+
+  return true;
 }

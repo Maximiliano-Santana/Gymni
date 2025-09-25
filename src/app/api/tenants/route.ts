@@ -1,6 +1,6 @@
 import db from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { validateSuperAdmin, validateRequest } from "../lib/validation";
+import { requireTenantRoles, validateRequest } from "../lib/validation";
 import {
   registerTenantDTO,
   RegisterTenantSchema,
@@ -16,20 +16,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const tenant: registerTenantDTO = await request.json();
+    const isAllowed = await requireTenantRoles([]);
+    if (!isAllowed) {
+      return Response.json(
+        { message: "No tienes permisos para hacer esto" },
+        { status: 401 }
+      );
+    }
 
+    const tenant: registerTenantDTO = await request.json();
     const requestValidation = validateRequest(RegisterTenantSchema, tenant);
     if (!requestValidation.success)
       return NextResponse.json(
         { message: "Parámetros inválidos" },
         { status: 400 }
-      );
-
-    const superValidation = await validateSuperAdmin();
-    if (!superValidation.success)
-      return NextResponse.json(
-        { message: "No tienes permisos para hacer esto." },
-        { status: 401 }
       );
 
     //Se valida subdomino unico
