@@ -84,17 +84,26 @@ export async function POST(req: Request) {
         { status: 400 }
       );
 
+    const addDays = (d: Date, n: number) =>
+      new Date(d.getTime() + n * 86_400_000);
+
     const now = new Date();
     const trialDays = 7;
+    const graceDays = 3;
 
-    const trialEnd = new Date(now.getTime() + trialDays * 86_400_000);
+    // 1) Trial
+    const trialEnd = trialDays > 0 ? addDays(now, trialDays) : now;
 
-    const periodStart = trialDays ? trialEnd : now;
-
+    // 2) Inicio y fin del periodo (calendario real)
+    const periodStart = trialEnd;
     const currentPeriodEnd = new Date(periodStart);
-    if (planPrice.interval === "MONTH")
+    if (planPrice.interval === "MONTH") {
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
-    else currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+    } else {
+      currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+    }
+
+    const invoiceDueAt = addDays(periodStart, graceDays);
 
     // 5) Transacción: Subscription (trialing) + Invoice (open)
     try {
@@ -128,10 +137,9 @@ export async function POST(req: Request) {
             currency: planPrice.currency,
             status: "open",
             issuedAt: now,
-            dueAt: trialEnd,
+            dueAt: invoiceDueAt,
             planId: planPrice.planId, // snapshots
             priceId: planPrice.id,
-            // notes: `Alta plan ${planPrice.plan.code} (${planPrice.interval})`
           },
           select: {
             id: true,
