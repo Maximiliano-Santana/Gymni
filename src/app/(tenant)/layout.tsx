@@ -5,7 +5,7 @@ import { Providers } from "../providers";
 import { headers } from "next/headers";
 import { validateTenantSubdomain } from "@/features/tenant/lib";
 import db from "@/lib/prisma";
-import { TenantSettings } from "@/features/theme/types/settings";
+import { TenantSettings } from "@/features/tenant/types/settings";
 import type { Tenant } from "@prisma/client";
 
 const geistSans = Geist({
@@ -47,7 +47,7 @@ export default async function TenantLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="/api/theme" precedence="high" />
+        <link rel="stylesheet" href="/api/tenants/theme" precedence="high" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

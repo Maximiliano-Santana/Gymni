@@ -5,7 +5,7 @@ import {
   registerTenantDTO,
   RegisterTenantSchema,
 } from "@/features/tenant/types";
-import { DEFAULT_TENANT_SETTINGS } from "@/features/theme/lib/default-settings";
+import { DEFAULT_TENANT_SETTINGS } from "@/features/tenant/lib/default-settings";
 import { Prisma } from "@prisma/client";
 
 // Handle GET requests

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireTenantRoles, validateRequest } from "../../lib/validation";
 import {
-  RegisterPaymenSchema,
-  RegisterPaymentDTO,
-} from "@/features/payment/types";
+  CreatePaymenSchema,
+  CreatePaymentDTO,
+} from "@/features/billing-platform/types/payment";
 import db from "@/lib/prisma";
-import { SubStatus } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
@@ -18,8 +17,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const payment: RegisterPaymentDTO = await req.json();
-    const validation = validateRequest(RegisterPaymenSchema, payment);
+    const payment: CreatePaymentDTO = await req.json();
+    const validation = validateRequest(CreatePaymenSchema, payment);
     if (!validation.success)
       return NextResponse.json(
         { message: validation.message },

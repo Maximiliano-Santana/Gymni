@@ -3,7 +3,7 @@ import { requireTenantRoles, validateRequest } from "../../lib/validation";
 import {
   CreateSubscriptionSchema,
   subscriptionDTO,
-} from "@/features/subscription/types";
+} from "@/features/billing-platform/types/subscription";
 import { headers } from "next/headers";
 import db from "@/lib/prisma";
 

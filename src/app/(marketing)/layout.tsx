@@ -22,7 +22,7 @@ export default function PublicLayout({
   return (
     <html lang="es">
       <head>
-        <link rel="stylesheet" href="/api/theme" precedence="high" />
+        <link rel="stylesheet" href="/api/tenants/theme" precedence="high" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

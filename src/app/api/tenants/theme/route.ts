@@ -1,8 +1,7 @@
-// app/api/theme.css/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { TenantSettings } from '../../../features/theme/types/settings';
-import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/theme/api';
-import db from '../../../lib/prisma';
+import { TenantSettings } from '../../../../features/tenant/types/settings';
+import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/tenant/server/theme';
+import db from '../../../../lib/prisma';
 
 
 export async function GET(request: NextRequest) {

@@ -5,7 +5,7 @@ import {
 } from "../../lib/validation";
 import { InvitationDTO, InvitationSchema } from "@/features/auth/types/forms";
 import db from "@/lib/prisma";
-import { subscriptionDTO } from "@/features/subscription/types";
+import { subscriptionDTO } from "@/features/billing-platform/types/subscription";
 
 export async function POST(req: NextRequest) {
   try {

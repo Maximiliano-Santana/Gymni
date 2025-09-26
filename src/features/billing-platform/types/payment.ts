@@ -1,7 +1,7 @@
 import { PaymentMethod } from "@prisma/client";
 import z from "zod";
 
-export const RegisterPaymenSchema = z
+export const CreatePaymenSchema = z
   .object({
     tenantId: z.string(),
     method: z.nativeEnum(PaymentMethod),
@@ -10,4 +10,4 @@ export const RegisterPaymenSchema = z
     reference: z.string().trim().optional(),
   })
 
-export type RegisterPaymentDTO = z.infer<typeof RegisterPaymenSchema>;
+export type CreatePaymentDTO = z.infer<typeof CreatePaymenSchema>;
