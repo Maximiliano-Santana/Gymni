@@ -64,12 +64,16 @@ export const authOptions: NextAuthOptions = {
       if (session?.user) {
         session.user.id = String(token.sub);
         (session.user as any).systemRole = (token as any).systemRole ?? "USER";
-        (session.user as any).tenants = (token as any).tenants ?? {}; // 👈 mapa por subdominio
+
+        // Exponer SOLO el mapa completo con la forma definitiva:
+        // session.user.tenants: subdomain -> { tenantId, roles }
+        const tenantsFromToken = (token as any).tenants ?? {};
+        (session.user as any).tenants = tenantsFromToken;
       }
       return session;
     },
   },
-};
+}
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

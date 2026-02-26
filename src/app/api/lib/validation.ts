@@ -78,16 +78,31 @@ export async function validateTenantStaff(tenantId: string) {
 export async function requireTenantRoles(
   needed: TenantRole[]
 ) {
-  const sub = (await headers()).get("x-tenant-subdomain")!;
+  const sub = (await headers()).get("x-tenant-subdomain");
+  if (!sub) throw new Error("401"); // sin contexto de tenant
+
   const s = await getServerSession(authOptions);
   if (!s) throw new Error("401");
-  if (s.user.systemRole == "SUPER_ADMIN") {
-    return true
-  };
 
-  const roles = s.user.tenants?.[sub] ?? [];
+  // Obtener info de tenant desde el token para evitar consultar BD
+  const info = (s.user as any).tenants?.[sub];
+
+  // SUPER_ADMIN: aún requiere que el subdominio exista en su mapa si la ruta necesita contexto
+  if (s.user.systemRole === "SUPER_ADMIN") {
+    if (!info) throw new Error("403_FORBIDDEN");
+    const roles: TenantRole[] = (info as any)?.roles || [];
+    const tenantId: string | undefined = (info as any)?.tenantId;
+    if (!tenantId) throw new Error("403_FORBIDDEN");
+    return { tenantId, subdomain: sub, roles } as { tenantId: string; subdomain: string; roles: TenantRole[] };
+  }
+
+  // Usuarios no super: validar roles requeridos
+  const roles: TenantRole[] = (info as any)?.roles || [];
   const ok = roles.some((r: TenantRole) => needed.includes(r));
   if (!ok) throw new Error("403_FORBIDDEN");
 
-  return true;
+  const tenantId: string | undefined = (info as any)?.tenantId;
+  if (!tenantId) throw new Error("403_FORBIDDEN");
+
+  return { tenantId, subdomain: sub, roles } as { tenantId: string; subdomain: string; roles: TenantRole[] };
 }
