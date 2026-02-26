@@ -6,10 +6,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import LoginForm from "@/features/auth/components/LoginForm";
-import { validateTenantSubdomain } from "@/features/tenant/lib";
+import { validateTenantSubdomain } from "@/features/tenants/lib";
+import { Tenant } from "@prisma/client";
 
 export default async function LoginPage() {
-  const tenant = await validateTenantSubdomain();
+  const tenant: Tenant | null = await validateTenantSubdomain();
 
   return (
     <>

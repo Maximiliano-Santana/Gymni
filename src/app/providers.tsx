@@ -1,6 +1,6 @@
 // app/providers.tsx
 "use client";
-import { TenantProvider } from "@/features/tenant/providers/tenant-context";
+import { TenantProvider } from "@/features/tenants/providers/tenant-context";
 import { SessionProvider } from "next-auth/react";
 
 export function Providers({

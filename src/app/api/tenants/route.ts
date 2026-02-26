@@ -4,8 +4,8 @@ import { requireTenantRoles, validateRequest } from "../lib/validation";
 import {
   registerTenantDTO,
   RegisterTenantSchema,
-} from "@/features/tenant/types";
-import { DEFAULT_TENANT_SETTINGS } from "@/features/tenant/lib/default-settings";
+} from "@/features/tenants/types";
+import { DEFAULT_TENANT_SETTINGS } from "@/features/tenants/lib/default-settings";
 import { Prisma } from "@prisma/client";
 
 // Handle GET requests

@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import RegisterForm from "@/features/auth/components/RegisterForm";
-import { validateTenantSubdomain } from "@/features/tenant/lib";
+import { validateTenantSubdomain } from "@/features/tenants/lib";
 
 export default async function RegisterPage() {
   const tenant = await validateTenantSubdomain();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { TenantSettings } from '../../../../features/tenant/types/settings';
-import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/tenant/server/theme';
+import { TenantSettings } from '../../../../features/tenants/types/settings';
+import { generateETag, generateTenantCSS, getDefaultCSS } from '@/features/tenants/server/theme';
 import db from '../../../../lib/prisma';
 
 

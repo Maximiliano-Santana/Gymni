@@ -3,9 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Providers } from "../providers";
 import { headers } from "next/headers";
-import { validateTenantSubdomain } from "@/features/tenant/lib";
+import { validateTenantSubdomain } from "@/features/tenants/lib";
 import db from "@/lib/prisma";
-import { TenantSettings } from "@/features/tenant/types/settings";
+import { TenantSettings } from "@/features/tenants/types/settings";
 import type { Tenant } from "@prisma/client";
 
 const geistSans = Geist({
