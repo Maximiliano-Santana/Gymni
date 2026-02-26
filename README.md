@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gym&i App
 
-## Getting Started
+Gym&i es una app SaaS multi tenant basada en subdominios para gestionar gimnasios. El nombre denota que nuestro principal objetivo es crear un lazo de confianza entre los gimnasios y sus clientes, ofreciendo herramientas para mejorar la experiencia del cliente y la eficiencia operativa del gimnasio.
 
-First, run the development server:
+Las principales funcionalidades son:
+- Panel de administración para los gimnasios, que permita gestionar sus clientes, su staff, sus membresías, sus entrenamientos y sus dietas.
+- Panel de miembros para visulizar progreso, entrenamientos, dietas y membresías.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Tecnologías
+- App fullstack con Next.js 15
+- NextAuth para autenticación
+- Prisma para ORM
+- TailwindCSS para estilos
+- Shadcn UI para componentes
+- Zod para validación
+- Zustand para state management
+- Base de datos Postgres
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Arquitectura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para el MVP, la arquitectura es simple y es una aplicacion monolítica, con una estructura FSD (Feature Sliced Design).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+En el futuro, la arquitectura se convertira en una aplicacion multi tenant, con una estructura de microservicios.
 
-## Learn More
+# Documentación
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Multi Tenant
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+La arquitectura multi tenant se basa en subdominios, por lo que cada gimnasio tendra su propio subdominio con su propia configuración. 
 
-## Deploy on Vercel
+Para el MVP, habrá una base de datos compartida para todos los gimnasios, 
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
