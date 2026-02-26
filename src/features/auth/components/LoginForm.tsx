@@ -6,13 +6,10 @@ import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import {
-  LoginDTO,
-  LoginSchema
-} from "../types/forms";
+import { LoginDTO, LoginSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
 import { signIn, useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { Tenant } from "@prisma/client";
 
 export default function LoginForm({ tenant }: { tenant: Tenant | null }) {
@@ -24,18 +21,25 @@ export default function LoginForm({ tenant }: { tenant: Tenant | null }) {
       tenantId: tenant?.id || "",
     },
   });
-  const { update, data }= useSession();
+  const { update } = useSession();
+  const router = useRouter();
 
   async function onSubmit(values: LoginDTO) {
     const res = await signIn("credentials", { ...values, redirect: false });
-    if(res?.error) return
-    await update({ refreshTenants: true })
-    const roles = data?.user.tenants[tenant?.subdomain] || []
-    const dest = roles.some((r:string)=>["OWNER","ADMIN","STAFF"].includes(r))
-    ? `/admin` : `/dashboard`;
-    redirect(dest);
-  }
 
+    if (res?.error) {
+      form.setError("root", { message: "Correo o contraseña incorrectos" });
+      return;
+    }
+
+    const updated = await update({ refreshTenants: true });
+    const subdomain = tenant?.subdomain ?? "";
+    const tenantInfo = (updated?.user as any)?.tenants?.[subdomain];
+    const roles: string[] = tenantInfo?.roles ?? [];
+
+    const isStaff = roles.some((r) => ["OWNER", "ADMIN", "STAFF"].includes(r));
+    router.push(isStaff ? "/admin" : "/dashboard");
+  }
 
   return (
     <>

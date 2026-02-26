@@ -1,23 +1,37 @@
 // prisma/seed.js
 const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
 const db = new PrismaClient();
 
 const theme = {
   version: "1.0.0",
   metadata: {
-    name: "Gymni Default Theme",
-    createdAt: "2025-09-19T00:00:00.000Z",
-    updatedAt: "2025-09-19T00:00:00.000Z",
+    name: "Dev Gym",
+    description: "Tema carbón y morado",
   },
   colors: {
-    primary: "#2563eb",
-    secondary: "#1e293b",
-    accent: "#f59e0b",
+    primary: "#7c3aed",       // morado vivo (violet-600)
+    secondary: "#a78bfa",     // morado claro (violet-400)
+    accent: "#6d28d9",        // morado profundo (violet-700)
     success: "#22c55e",
-    warning: "#ef4444",
-    background: { primary: "#0f172a", secondary: "#1e293b", card: "#111827" },
-    text: { primary: "#f9fafb", secondary: "#cbd5e1", muted: "#94a3b8" },
-    border: { default: "#334155", focus: "#2563eb" },
+    warning: "#f87171",
+    background: {
+      primary: "#18181b",     // carbón oscuro (zinc-900)
+      secondary: "#52525b",   // base para escala de grises (zinc-600)
+      card: "#27272a",        // carbón medio (zinc-800)
+    },
+    text: {
+      primary: "#fafafa",     // blanco suave (zinc-50)
+      secondary: "#a1a1aa",   // gris claro (zinc-400)
+      muted: "#71717a",       // gris apagado (zinc-500)
+    },
+    border: {
+      default: "#3f3f46",     // zinc-700
+      focus: "#a78bfa",       // morado claro para focus rings
+    },
+  },
+  layout: {
+    borderRadius: { base: "0.5rem" },
   },
 };
 
@@ -37,6 +51,24 @@ async function main() {
     },
   });
   console.log("✅ Seed OK:", { id: tenant.id, subdomain: tenant.subdomain });
+
+  // Usuario OWNER para dev-gym
+  // Credenciales: admin@gmail.com / Tashamaria123*
+  const owner = await db.user.upsert({
+    where: { email: "admin@gmail.com" },
+    update: {},
+    create: {
+      name: "Admin Dev",
+      email: "admin@gmail.com",
+      password: await bcrypt.hash("Tashamaria123*", 10),
+    },
+  });
+  await db.tenantUser.upsert({
+    where: { userId_tenantId: { userId: owner.id, tenantId: tenant.id } },
+    update: {},
+    create: { userId: owner.id, tenantId: tenant.id, roles: ["OWNER"] },
+  });
+  console.log("✅ Seed OK: usuario OWNER creado →", owner.email);
 
   const plan = await db.plan.upsert({
     where: { code: "BASIC" },

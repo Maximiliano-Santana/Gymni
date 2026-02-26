@@ -10,7 +10,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ===============================
@@ -209,4 +208,15 @@ model Payment {
   @@map("payments")
   @@index([tenantId, paidAt])
   @@unique([invoiceId, reference]) // evita doble captura por mismo folio
+}
+
+// ===============================
+// Billing (Member ↔ Tenant)
+// ===============================
+
+model MembershipPlan {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+
 }
