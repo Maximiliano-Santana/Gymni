@@ -1,5 +1,6 @@
 export interface TenantSettings {
   version: string;
+  mode: "light" | "dark";
   metadata: {
     name: string;
     description?: string;

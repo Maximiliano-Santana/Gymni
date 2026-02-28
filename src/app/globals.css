@@ -10,9 +10,8 @@
   --color-black: var(--black);
 
   --color-primary: var(--primary);
-  --color-primary-l1: var(--primary-l1);
-  --color-primary-d1: var(--primary-d1);
-  --color-primary-d2: var(--primary-d2);
+  --color-primary-l: var(--primary-l);
+  --color-primary-d: var(--primary-d);
   --color-primary-hover: var(--primary-hover);
   --color-primary-focus: var(--primary-focus);
   --color-primary-border: var(--primary-border);

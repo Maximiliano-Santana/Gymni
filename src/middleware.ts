@@ -10,7 +10,6 @@ function computeSubdomain(hostname: string): string | null {
 
   // Dev: localhost sin subdominio → dev-gym, acme.localhost → "acme"
   if (process.env.NODE_ENV === "development") {
-    if (host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return "dev-gym";
     if (host.endsWith(".localhost")) return host.slice(0, -".localhost".length);
   }
 

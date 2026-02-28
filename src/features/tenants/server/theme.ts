@@ -10,9 +10,12 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   const manifest = {
     ...DEFAULT_TENANT_SETTINGS,
     ...theme,
+    mode: theme?.mode ?? DEFAULT_TENANT_SETTINGS.mode,
     colors: { ...DEFAULT_TENANT_SETTINGS.colors, ...theme?.colors },
     layout: { ...DEFAULT_TENANT_SETTINGS.layout, ...theme?.layout },
   };
+
+  const isDark = manifest.mode === "dark";
 
   // Calcular colores derivados automáticamente
   const primaryColors = generateColorVariants(manifest.colors.primary);

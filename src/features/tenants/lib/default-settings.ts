@@ -2,6 +2,7 @@ import type { TenantSettings } from "../types/settings";
 
 export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
   version: "1.0.0",
+  mode: "light",
   metadata: {
     name: "Gym&i",
     description: "App de gym impulsada por Gym&i",
