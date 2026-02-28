@@ -70,7 +70,7 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   
   /* Semantic colors */
   --primary-foreground: ${getContrastColor(manifest.colors.primary)};
-  --secondary-foreground: ${manifest.colors.primary};
+  --secondary-foreground: ${getContrastColor(manifest.colors.secondary)};
   --muted: ${grayColors.g500};
   --muted-foreground: ${grayColors.g200};
   --accent: ${primaryColors.secondary};

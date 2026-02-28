@@ -53,14 +53,15 @@ async function main() {
   console.log("✅ Seed OK:", { id: tenant.id, subdomain: tenant.subdomain });
 
   // Usuario OWNER para dev-gym
-  // Credenciales: admin@gmail.com / Tashamaria123*
+  // Credenciales: admin@gmail.com / tashamaria123*d
+  const hashedPassword = await bcrypt.hash("tashamaria123*d", 10);
   const owner = await db.user.upsert({
     where: { email: "admin@gmail.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Admin Dev",
       email: "admin@gmail.com",
-      password: await bcrypt.hash("Tashamaria123*", 10),
+      password: hashedPassword,
     },
   });
   await db.tenantUser.upsert({
