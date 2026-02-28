@@ -5,14 +5,20 @@ import { getToken } from "next-auth/jwt";
 const isProtected = (p: string) =>
   p.startsWith("/dashboard") || p.startsWith("/api/protected");
 
-function computeSubdomain(hostname: string) {
+function computeSubdomain(hostname: string): string | null {
   const host = hostname.split(":")[0];
-  const sub = host.split(".")[0];
-  if (
-    process.env.NODE_ENV === "development" &&
-    (sub === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host))
-  ) return "dev-gym";
-  return sub && sub !== "www" ? sub : null;
+
+  // Dev: localhost sin subdominio → dev-gym, acme.localhost → "acme"
+  if (process.env.NODE_ENV === "development") {
+    if (host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return "dev-gym";
+    if (host.endsWith(".localhost")) return host.slice(0, -".localhost".length);
+  }
+
+  const parts = host.split(".");
+  // Root domain (gymni.com = 2 partes) o www.gymni.com → sin tenant
+  if (parts.length <= 2) return null;
+  const sub = parts[0];
+  return sub === "www" ? null : sub;
 }
 
 export default async function middleware(req: NextRequest) {
