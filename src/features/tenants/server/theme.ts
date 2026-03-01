@@ -24,16 +24,15 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
     ?? DEFAULT_TENANT_SETTINGS.layout.borderRadius.base;
 
   // Generar escalas de color
-  const primaryColors   = generateColorVariants(primary);
-  const secondaryColors = generateColorVariants(secondary);
-  const grayColors      = generateGrayScale(grayBase); // normaliza internamente
-  const chartColors     = generateChartColors(primary);
+  const grayColors  = generateGrayScale(grayBase);
+  const chartColors = generateChartColors(primary);
 
   // Derivar superficies según mode + escala de grises
   const background  = isDark ? grayColors.g900 : "#ffffff";
   const card        = isDark ? grayColors.g800 : "#ffffff";
   const textPrimary = isDark ? grayColors.g100 : grayColors.g900;
   const inputBorder = adjustColor(primary, { alpha: 0.4 });
+  const focusRing   = adjustColor(primary, { alpha: 0.3 });
 
   return `
 :root {
@@ -42,17 +41,9 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
 
   /* Primary */
   --primary: ${primary};
-  --primary-l: ${primaryColors.light};
-  --primary-d: ${primaryColors.dark};
-  --primary-hover: ${primaryColors.hover};
-  --primary-focus: ${primaryColors.focus};
-  --primary-border: ${primaryColors.border};
-  --primary-secondary: ${primaryColors.secondary};
 
   /* Secondary */
   --secondary: ${secondary};
-  --secondary-l: ${secondaryColors.light};
-  --secondary-d: ${secondaryColors.dark};
 
   /* Gray scale — generada y normalizada desde grayBase */
   --gray: ${grayColors.base};
@@ -86,12 +77,12 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   --secondary-foreground: ${getContrastColor(secondary)};
   --muted: ${isDark ? grayColors.g700 : grayColors.g200};
   --muted-foreground: ${isDark ? grayColors.g300 : grayColors.g600};
-  --accent: ${primaryColors.secondary};
+  --accent: ${lightenColor(primary, 20)};
   --accent-foreground: ${primary};
   --destructive: ${warning};
   --border: ${grayColors.base};
   --input: ${inputBorder};
-  --ring: ${primaryColors.focus};
+  --ring: ${focusRing};
 
   /* Charts — derivados del primary */
   --chart-1: ${chartColors.c1};
@@ -105,10 +96,10 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   --sidebar-foreground: ${isDark ? grayColors.g100 : grayColors.g900};
   --sidebar-primary: ${primary};
   --sidebar-primary-foreground: ${getContrastColor(primary)};
-  --sidebar-accent: ${primaryColors.hover};
-  --sidebar-accent-foreground: ${getContrastColor(primaryColors.hover)};
-  --sidebar-border: ${primaryColors.border};
-  --sidebar-ring: ${primaryColors.focus};
+  --sidebar-accent: ${lightenColor(primary, 20)};
+  --sidebar-accent-foreground: ${darkenColor(primary, 20)};
+  --sidebar-border: ${grayColors.base};
+  --sidebar-ring: ${focusRing};
 }
 `;
 }
@@ -169,34 +160,12 @@ function darkenColor(color: string, amount: number): string {
   return hslToHex(h, s, Math.max(l - amount, 0));
 }
 
-/** Ajusta saturación, luminosidad o agrega canal alpha */
-function adjustColor(
-  color: string,
-  adjustments: { saturation?: number; lightness?: number; alpha?: number }
-): string {
-  if (adjustments.alpha !== undefined) {
-    const opacity = Math.round(adjustments.alpha * 255)
-      .toString(16)
-      .padStart(2, "0");
-    return color + opacity;
-  }
-
-  const { h, s, l } = hexToHsl(color);
-  const newS = Math.min(100, Math.max(0, s + (adjustments.saturation ?? 0)));
-  const newL = Math.min(100, Math.max(0, l + (adjustments.lightness ?? 0)));
-  return hslToHex(h, newS, newL);
-}
-
-/** Genera variantes de un color base */
-function generateColorVariants(baseColor: string) {
-  return {
-    light:     lightenColor(baseColor, 20),
-    dark:      darkenColor(baseColor, 20),
-    hover:     adjustColor(baseColor, { lightness: -5, saturation: 5 }),
-    focus:     adjustColor(baseColor, { alpha: 0.3 }),
-    border:    lightenColor(baseColor, 30),
-    secondary: lightenColor(baseColor, 42),
-  };
+/** Agrega canal alpha a un color hex */
+function adjustColor(color: string, { alpha }: { alpha: number }): string {
+  const opacity = Math.round(alpha * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return color + opacity;
 }
 
 /**

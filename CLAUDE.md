@@ -32,9 +32,17 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 
 ### Theming System
 
-Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with computed color variants and gray scale (`src/features/tenants/server/theme.ts`). Caching uses ETag based on `tenant.id + updatedAt`.
+Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with semantic tokens, gray scale, and chart colors (`src/features/tenants/server/theme.ts`). The endpoint also accepts `?tenant=<subdomain>` to force a specific tenant's theme. Caching uses ETag based on `tenant.id + updatedAt`.
 
 `globals.css` maps all CSS variables to Tailwind tokens via `@theme inline`, so Tailwind classes like `bg-primary` and `text-foreground` automatically reflect the tenant's theme.
+
+**Color convention: follow the shadcn standard.** Do NOT create custom color tokens (e.g. `--primary-light`, `--primary-hover`). Instead:
+- Use the semantic tokens shadcn defines: `primary`, `secondary`, `accent`, `muted`, `destructive`, `background`, `foreground`, `card`, `popover`, `border`, `input`, `ring`, plus their `-foreground` counterparts.
+- For hover, focus, and subtle variants, use Tailwind opacity modifiers: `bg-primary/90` (hover), `bg-primary/10` (subtle bg), `border-primary/20` (light border), etc.
+- The gray scale (`gray-100` to `gray-900`) and chart colors (`chart-1` to `chart-5`) are also available and derived from the tenant's settings.
+- Theme preview available at `/theme-preview` (public, no auth required).
+
+Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green). Default theme is light + orange.
 
 ### Auth (NextAuth v4, JWT strategy)
 

@@ -369,6 +369,177 @@ export default function ThemePreviewPage() {
           </Card>
         </div>
 
+        {/* ── Paleta de colores ─────────────────────────────────────── */}
+        <Separator />
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Paleta de colores</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tokens semánticos shadcn + gray scale del tenant. Variantes via opacidad de Tailwind.
+            </p>
+          </div>
+
+          {/* Semantic color swatches */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tokens semánticos</CardTitle>
+              <CardDescription>Los colores que shadcn y tus componentes consumen</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                {[
+                  { name: "primary",     cls: "bg-primary" },
+                  { name: "secondary",   cls: "bg-secondary" },
+                  { name: "accent",      cls: "bg-accent" },
+                  { name: "muted",       cls: "bg-muted" },
+                  { name: "destructive", cls: "bg-destructive" },
+                  { name: "success",     cls: "bg-success" },
+                  { name: "background",  cls: "bg-background" },
+                  { name: "card",        cls: "bg-card" },
+                  { name: "popover",     cls: "bg-popover" },
+                  { name: "border",      cls: "bg-border" },
+                  { name: "input",       cls: "bg-input" },
+                  { name: "ring",        cls: "bg-ring" },
+                ].map((s) => (
+                  <div key={s.name} className="flex flex-col items-center gap-2">
+                    <div className={`h-12 w-full rounded-lg border ${s.cls}`} />
+                    <p className="text-[10px] text-muted-foreground font-mono">{s.name}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Opacity variants */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Variantes con opacidad</CardTitle>
+              <CardDescription>Cómo shadcn y Tailwind generan hover, focus, etc.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-3 sm:grid-cols-10">
+                {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((o) => (
+                  <div key={o} className="flex flex-col items-center gap-2">
+                    <div className={`h-12 w-full rounded-lg border bg-primary/${o}`} />
+                    <p className="text-[10px] text-muted-foreground font-mono">/{o}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Use cases */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ejemplos de uso</CardTitle>
+              <CardDescription>Patrones comunes usando opacidad de Tailwind</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+
+              {/* Buttons */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Botones con hover via opacidad</p>
+                <div className="flex flex-wrap gap-3">
+                  <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+                    primary (hover /90)
+                  </button>
+                  <button className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors">
+                    secondary (hover /80)
+                  </button>
+                  <Button variant="destructive">destructive</Button>
+                  <Button variant="outline">outline</Button>
+                  <Button variant="ghost">ghost</Button>
+                </div>
+              </div>
+
+              {/* Banners */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Banners</p>
+                <div className="rounded-lg border border-primary/20 bg-primary/10 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">Membresía renovada</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">bg-primary/10, border-primary/20</p>
+                </div>
+                <div className="rounded-lg border border-secondary/20 bg-secondary/10 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">Clase confirmada</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">bg-secondary/10, border-secondary/20</p>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tags</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-2.5 py-0.5 text-xs font-medium">
+                    CrossFit
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-secondary/15 text-secondary px-2.5 py-0.5 text-xs font-medium">
+                    Yoga
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-xs font-medium">
+                    Premium
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-destructive/15 text-destructive px-2.5 py-0.5 text-xs font-medium">
+                    Vencida
+                  </span>
+                </div>
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* Gray scale */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gray Scale</CardTitle>
+              <CardDescription>Escala de grises derivada del grayBase del tenant</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-2 sm:grid-cols-9">
+                {[
+                  { name: "100", cls: "bg-gray-100" },
+                  { name: "200", cls: "bg-gray-200" },
+                  { name: "300", cls: "bg-gray-300" },
+                  { name: "400", cls: "bg-gray-400" },
+                  { name: "500", cls: "bg-gray-500" },
+                  { name: "600", cls: "bg-gray-600" },
+                  { name: "700", cls: "bg-gray-700" },
+                  { name: "800", cls: "bg-gray-800" },
+                  { name: "900", cls: "bg-gray-900" },
+                ].map((g) => (
+                  <div key={g.name} className="flex flex-col items-center gap-1">
+                    <div className={`h-10 w-full rounded-md border ${g.cls}`} />
+                    <p className="text-[9px] text-muted-foreground font-mono">{g.name}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Chart colors */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Chart Colors</CardTitle>
+              <CardDescription>Derivados del primary por rotación de hue</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-3">
+                {[
+                  { name: "chart-1", cls: "bg-chart-1" },
+                  { name: "chart-2", cls: "bg-chart-2" },
+                  { name: "chart-3", cls: "bg-chart-3" },
+                  { name: "chart-4", cls: "bg-chart-4" },
+                  { name: "chart-5", cls: "bg-chart-5" },
+                ].map((c) => (
+                  <div key={c.name} className="flex flex-col items-center gap-2">
+                    <div className={`h-12 w-full rounded-lg border ${c.cls}`} />
+                    <p className="text-[10px] text-muted-foreground font-mono">{c.name.replace("chart-","")}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </main>
     </div>
   );
