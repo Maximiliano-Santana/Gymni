@@ -77,8 +77,8 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   --secondary-foreground: ${getContrastColor(secondary)};
   --muted: ${isDark ? grayColors.g700 : grayColors.g200};
   --muted-foreground: ${isDark ? grayColors.g300 : grayColors.g600};
-  --accent: ${lightenColor(primary, 20)};
-  --accent-foreground: ${primary};
+  --accent: ${isDark ? adjustColor(primary, { alpha: 0.15 }) : lightenColor(primary, 40)};
+  --accent-foreground: ${textPrimary};
   --destructive: ${warning};
   --border: ${grayColors.base};
   --input: ${inputBorder};
@@ -170,30 +170,26 @@ function adjustColor(color: string, { alpha }: { alpha: number }): string {
 
 /**
  * Genera escala de grises desde un color base.
- * Normaliza el input: conserva el matiz (hue) pero fuerza saturación baja (≤12%)
- * para garantizar que cualquier color se convierta en un gris tintado.
+ * Conserva el hue (matiz) del input pero fuerza saturación baja (≤10%)
+ * para garantizar un gris tintado. Cada paso tiene luminosidad fija
+ * para evitar extremos puros (nunca blanco #fff ni negro #000).
  */
 function generateGrayScale(baseGray: string) {
-  const { h, s, l } = hexToHsl(baseGray);
+  const { h, s } = hexToHsl(baseGray);
+  const sat = Math.min(s, 10);
 
-  // Desaturar (máx 12%) y centrar la luminosidad en rango mid (35–65%)
-  const normalizedBase = hslToHex(
-    h,
-    Math.min(s, 12),
-    Math.min(Math.max(l, 35), 65)
-  );
-
+  // Luminosidades fijas: rango 96% → 9%, nunca llega a blanco/negro puro
   return {
-    base: normalizedBase,
-    g100: lightenColor(normalizedBase, 40),
-    g200: lightenColor(normalizedBase, 30),
-    g300: lightenColor(normalizedBase, 20),
-    g400: lightenColor(normalizedBase, 10),
-    g500: normalizedBase,
-    g600: darkenColor(normalizedBase, 10),
-    g700: darkenColor(normalizedBase, 20),
-    g800: darkenColor(normalizedBase, 30),
-    g900: darkenColor(normalizedBase, 40),
+    base: hslToHex(h, sat, 50),
+    g100: hslToHex(h, sat, 96),
+    g200: hslToHex(h, sat, 90),
+    g300: hslToHex(h, sat, 82),
+    g400: hslToHex(h, sat, 70),
+    g500: hslToHex(h, sat, 50),
+    g600: hslToHex(h, sat, 40),
+    g700: hslToHex(h, sat, 25),
+    g800: hslToHex(h, sat, 15),
+    g900: hslToHex(h, sat, 9),
   };
 }
 

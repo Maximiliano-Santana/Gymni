@@ -15,7 +15,7 @@ const devGymTheme = {
   colors: {
     primary:   "#7c3aed",  // violet-600
     secondary: "#a78bfa",  // violet-400
-    grayBase:  "#52525b",  // zinc-600 — genera escala de grises fría
+    grayBase:  "#5c4a7c",  // gris tintado morado
     success:   "#22c55e",
     warning:   "#f87171",
   },
@@ -34,7 +34,7 @@ const greenGymTheme = {
   colors: {
     primary:   "#16a34a",  // green-600
     secondary: "#0d9488",  // teal-600 — complementa al verde
-    grayBase:  "#6b7280",  // gray-500 — gris neutro
+    grayBase:  "#4a7c6b",  // gris tintado verde-azulado
     success:   "#22c55e",
     warning:   "#f87171",
   },
