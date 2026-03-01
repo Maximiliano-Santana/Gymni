@@ -2,33 +2,46 @@ import { DEFAULT_TENANT_SETTINGS } from "../lib/default-settings";
 import { TenantSettings } from "../types/settings";
 
 /**
- * Genera CSS completo basado en tu estructura global actual
+ * Genera CSS completo a partir del TenantSettings.
+ * Solo requiere `primary` + `mode` — todo lo demás se deriva automáticamente.
  */
 export function generateTenantCSS(theme: TenantSettings | null): string {
+  const mode = theme?.mode ?? DEFAULT_TENANT_SETTINGS.mode;
+  const isDark = mode === "dark";
 
-  // Se mergean manifests para tener fallbacks
-  const manifest = {
-    ...DEFAULT_TENANT_SETTINGS,
-    ...theme,
-    mode: theme?.mode ?? DEFAULT_TENANT_SETTINGS.mode,
-    colors: { ...DEFAULT_TENANT_SETTINGS.colors, ...theme?.colors },
-    layout: { ...DEFAULT_TENANT_SETTINGS.layout, ...theme?.layout },
-  };
+  // Resolver colores con fallbacks en cascada
+  const primary   = theme?.colors?.primary   ?? DEFAULT_TENANT_SETTINGS.colors.primary;
+  const grayBase  = theme?.colors?.grayBase  ?? DEFAULT_TENANT_SETTINGS.colors.grayBase ?? "#545454";
+  const success   = theme?.colors?.success   ?? DEFAULT_TENANT_SETTINGS.colors.success  ?? "#2db224";
+  const warning   = theme?.colors?.warning   ?? DEFAULT_TENANT_SETTINGS.colors.warning  ?? "#eb7b7b";
 
-  const isDark = manifest.mode === "dark";
+  // secondary: usar el definido o derivar del primary
+  const secondary = theme?.colors?.secondary
+    ?? DEFAULT_TENANT_SETTINGS.colors.secondary
+    ?? deriveSecondary(primary);
 
-  // Calcular colores derivados automáticamente
-  const primaryColors = generateColorVariants(manifest.colors.primary);
-  const secondaryColors = generateColorVariants(manifest.colors.secondary);
-  const grayColors = generateGrayScale(manifest.colors.background.secondary);
+  const radius = theme?.layout?.borderRadius?.base
+    ?? DEFAULT_TENANT_SETTINGS.layout.borderRadius.base;
+
+  // Generar escalas de color
+  const primaryColors   = generateColorVariants(primary);
+  const secondaryColors = generateColorVariants(secondary);
+  const grayColors      = generateGrayScale(grayBase); // normaliza internamente
+  const chartColors     = generateChartColors(primary);
+
+  // Derivar superficies según mode + escala de grises
+  const background  = isDark ? grayColors.g900 : "#ffffff";
+  const card        = isDark ? grayColors.g800 : "#ffffff";
+  const textPrimary = isDark ? grayColors.g100 : grayColors.g900;
+  const inputBorder = adjustColor(primary, { alpha: 0.4 });
 
   return `
 :root {
   --white: #ffffff;
   --black: #000000;
 
-  /* Primary colors - Dinámicos desde manifest */
-  --primary: ${manifest.colors.primary};
+  /* Primary */
+  --primary: ${primary};
   --primary-l: ${primaryColors.light};
   --primary-d: ${primaryColors.dark};
   --primary-hover: ${primaryColors.hover};
@@ -36,12 +49,12 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   --primary-border: ${primaryColors.border};
   --primary-secondary: ${primaryColors.secondary};
 
-  /* Secondary colors - Dinámicos desde manifest */
-  --secondary: ${manifest.colors.secondary};
+  /* Secondary */
+  --secondary: ${secondary};
   --secondary-l: ${secondaryColors.light};
   --secondary-d: ${secondaryColors.dark};
 
-  /* Gray scale - Generada automáticamente */
+  /* Gray scale — generada y normalizada desde grayBase */
   --gray: ${grayColors.base};
   --gray-100: ${grayColors.g100};
   --gray-200: ${grayColors.g200};
@@ -53,45 +66,45 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   --gray-800: ${grayColors.g800};
   --gray-900: ${grayColors.g900};
 
-  /* Status colors - Desde manifest */
-  --danger: ${manifest.colors.warning};
-  --success: ${manifest.colors.success};
+  /* Status */
+  --danger: ${warning};
+  --success: ${success};
 
-  /* Layout - Desde manifest */
-  --radius: ${manifest.layout.borderRadius.base};
-  
-  /* Base colors - Desde manifest */
-  --background: ${manifest.colors.background.primary};
-  --foreground: ${manifest.colors.text.primary};
-  --card: ${manifest.colors.background.card};
-  --card-foreground: ${manifest.colors.text.primary};
-  --popover: ${grayColors.g100};
-  --popover-foreground: ${grayColors.g900};
-  
-  /* Semantic colors */
-  --primary-foreground: ${getContrastColor(manifest.colors.primary)};
-  --secondary-foreground: ${getContrastColor(manifest.colors.secondary)};
-  --muted: ${grayColors.g500};
-  --muted-foreground: ${grayColors.g200};
+  /* Layout */
+  --radius: ${radius};
+
+  /* Superficies — derivadas de mode + gray scale */
+  --background: ${background};
+  --foreground: ${textPrimary};
+  --card: ${card};
+  --card-foreground: ${textPrimary};
+  --popover: ${isDark ? grayColors.g800 : grayColors.g100};
+  --popover-foreground: ${isDark ? grayColors.g100 : grayColors.g900};
+
+  /* Semánticos */
+  --primary-foreground: ${getContrastColor(primary)};
+  --secondary-foreground: ${getContrastColor(secondary)};
+  --muted: ${isDark ? grayColors.g700 : grayColors.g200};
+  --muted-foreground: ${isDark ? grayColors.g300 : grayColors.g600};
   --accent: ${primaryColors.secondary};
-  --accent-foreground: ${manifest.colors.primary};
-  --destructive: ${manifest.colors.warning};
+  --accent-foreground: ${primary};
+  --destructive: ${warning};
   --border: ${grayColors.base};
-  --input: ${manifest.colors.border.focus};
+  --input: ${inputBorder};
   --ring: ${primaryColors.focus};
-  
-  /* Chart colors - Mantener por compatibilidad */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  
-  /* Sidebar colors */
-  --sidebar: ${grayColors.g100};
-  --sidebar-foreground: ${grayColors.g900};
-  --sidebar-primary: ${manifest.colors.primary};
-  --sidebar-primary-foreground: ${getContrastColor(manifest.colors.primary)};
+
+  /* Charts — derivados del primary */
+  --chart-1: ${chartColors.c1};
+  --chart-2: ${chartColors.c2};
+  --chart-3: ${chartColors.c3};
+  --chart-4: ${chartColors.c4};
+  --chart-5: ${chartColors.c5};
+
+  /* Sidebar */
+  --sidebar: ${isDark ? grayColors.g800 : grayColors.g100};
+  --sidebar-foreground: ${isDark ? grayColors.g100 : grayColors.g900};
+  --sidebar-primary: ${primary};
+  --sidebar-primary-foreground: ${getContrastColor(primary)};
   --sidebar-accent: ${primaryColors.hover};
   --sidebar-accent-foreground: ${getContrastColor(primaryColors.hover)};
   --sidebar-border: ${primaryColors.border};
@@ -100,86 +113,67 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
 `;
 }
 
-/**
- * Genera variantes de color automáticamente
- */
-function generateColorVariants(baseColor: string) {
-  // Simulación de variantes - en producción usar librerías como color2k
-  const variants = {
-    light: lightenColor(baseColor, 20),
-    dark: darkenColor(baseColor, 20),
-    hover: adjustColor(baseColor, { saturation: 10, lightness: -5 }),
-    focus: adjustColor(baseColor, { alpha: 0.3 }),
-    border: adjustColor(baseColor, { lightness: 30, saturation: -20 }),
-    secondary: adjustColor(baseColor, { lightness: 45, saturation: -30 }),
+// ---------------------------------------------------------------------------
+// Color utilities
+// ---------------------------------------------------------------------------
+
+/** Convierte hex a HSL. Retorna h: 0–360, s: 0–100, l: 0–100 */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  if (!hex.startsWith("#") || hex.length < 7) return { h: 0, s: 0, l: 50 };
+
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+
+  if (max === min) return { h: 0, s: 0, l: l * 100 };
+
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+/** Convierte HSL a hex */
+function hslToHex(h: number, s: number, l: number): string {
+  const lN = l / 100;
+  const sN = s / 100;
+  const a = sN * Math.min(lN, 1 - lN);
+
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = lN - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
   };
 
-  return variants;
+  return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-/**
- * Genera escala de grises basada en un color base
- */
-function generateGrayScale(baseGray: string) {
-  return {
-    base: "#dee3e7",
-    g100: lightenColor(baseGray, 40),
-    g200: lightenColor(baseGray, 30),
-    g300: lightenColor(baseGray, 20),
-    g400: lightenColor(baseGray, 10),
-    g500: baseGray,
-    g600: darkenColor(baseGray, 10),
-    g700: darkenColor(baseGray, 20),
-    g800: darkenColor(baseGray, 30),
-    g900: darkenColor(baseGray, 40),
-  };
-}
-
-/**
- * Determina color de contraste (blanco o negro)
- */
-function getContrastColor(bgColor: string): string {
-  // Algoritmo simplificado - en producción usar contrast ratio real
-  const isLight = isColorLight(bgColor);
-  return isLight ? "#000000" : "#ffffff";
-}
-
-/**
- * Utilitarias de color (simplificadas)
- * En producción, usar librerías como color2k, chroma-js, etc.
- */
+/** Aclara un color ajustando la luminosidad en HSL */
 function lightenColor(color: string, amount: number): string {
-  // Implementación simplificada
-  if (color.startsWith("#")) {
-    const hex = color.slice(1);
-    const num = parseInt(hex, 16);
-    let r = (num >> 16) + Math.round((255 * amount) / 100);
-    let g = ((num >> 8) & 0x00ff) + Math.round((255 * amount) / 100);
-    let b = (num & 0x0000ff) + Math.round((255 * amount) / 100);
-
-    r = Math.min(255, Math.max(0, r));
-    g = Math.min(255, Math.max(0, g));
-    b = Math.min(255, Math.max(0, b));
-
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-  }
-  return color;
+  const { h, s, l } = hexToHsl(color);
+  return hslToHex(h, s, Math.min(l + amount, 100));
 }
 
+/** Oscurece un color ajustando la luminosidad en HSL */
 function darkenColor(color: string, amount: number): string {
-  return lightenColor(color, -amount);
+  const { h, s, l } = hexToHsl(color);
+  return hslToHex(h, s, Math.max(l - amount, 0));
 }
 
+/** Ajusta saturación, luminosidad o agrega canal alpha */
 function adjustColor(
   color: string,
-  adjustments: {
-    saturation?: number;
-    lightness?: number;
-    alpha?: number;
-  }
+  adjustments: { saturation?: number; lightness?: number; alpha?: number }
 ): string {
-  // Implementación simplificada para demo
-  // En producción, usar librerías especializadas
   if (adjustments.alpha !== undefined) {
     const opacity = Math.round(adjustments.alpha * 255)
       .toString(16)
@@ -187,42 +181,96 @@ function adjustColor(
     return color + opacity;
   }
 
-  if (adjustments.lightness) {
-    return adjustments.lightness > 0
-      ? lightenColor(color, adjustments.lightness)
-      : darkenColor(color, Math.abs(adjustments.lightness));
-  }
-
-  return color;
+  const { h, s, l } = hexToHsl(color);
+  const newS = Math.min(100, Math.max(0, s + (adjustments.saturation ?? 0)));
+  const newL = Math.min(100, Math.max(0, l + (adjustments.lightness ?? 0)));
+  return hslToHex(h, newS, newL);
 }
 
-function isColorLight(color: string): boolean {
-  // Algoritmo simplificado de luminancia
-  if (color.startsWith("#")) {
-    const hex = color.slice(1);
-    const num = parseInt(hex, 16);
-    const r = (num >> 16) & 255;
-    const g = (num >> 8) & 255;
-    const b = num & 255;
-
-    // Fórmula de luminancia percibida
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5;
-  }
-  return false;
+/** Genera variantes de un color base */
+function generateColorVariants(baseColor: string) {
+  return {
+    light:     lightenColor(baseColor, 20),
+    dark:      darkenColor(baseColor, 20),
+    hover:     adjustColor(baseColor, { lightness: -5, saturation: 5 }),
+    focus:     adjustColor(baseColor, { alpha: 0.3 }),
+    border:    lightenColor(baseColor, 30),
+    secondary: lightenColor(baseColor, 42),
+  };
 }
 
 /**
- * Genera ETag para cache
+ * Genera escala de grises desde un color base.
+ * Normaliza el input: conserva el matiz (hue) pero fuerza saturación baja (≤12%)
+ * para garantizar que cualquier color se convierta en un gris tintado.
  */
+function generateGrayScale(baseGray: string) {
+  const { h, s, l } = hexToHsl(baseGray);
+
+  // Desaturar (máx 12%) y centrar la luminosidad en rango mid (35–65%)
+  const normalizedBase = hslToHex(
+    h,
+    Math.min(s, 12),
+    Math.min(Math.max(l, 35), 65)
+  );
+
+  return {
+    base: normalizedBase,
+    g100: lightenColor(normalizedBase, 40),
+    g200: lightenColor(normalizedBase, 30),
+    g300: lightenColor(normalizedBase, 20),
+    g400: lightenColor(normalizedBase, 10),
+    g500: normalizedBase,
+    g600: darkenColor(normalizedBase, 10),
+    g700: darkenColor(normalizedBase, 20),
+    g800: darkenColor(normalizedBase, 30),
+    g900: darkenColor(normalizedBase, 40),
+  };
+}
+
+/**
+ * Genera 5 colores para charts derivados del primary.
+ * Distribuye los hues para máxima diferenciación visual,
+ * manteniendo saturación y luminosidad en rangos legibles.
+ */
+function generateChartColors(primary: string) {
+  const { h, s } = hexToHsl(primary);
+  const sat = Math.min(Math.max(s, 50), 85);
+
+  return {
+    c1: hslToHex(h,                    sat,       50),  // primary puro (normalizado)
+    c2: hslToHex((h + 150) % 360,      sat - 10,  45),  // complementario
+    c3: hslToHex((h + 210) % 360,      sat - 20,  35),  // triádico oscuro
+    c4: hslToHex((h + 60)  % 360,      sat,       65),  // análogo cálido claro
+    c5: hslToHex((h + 270) % 360,      sat - 5,   55),  // split-complementario
+  };
+}
+
+/** Deriva un secondary razonable desde el primary (más claro, menos saturado) */
+function deriveSecondary(primary: string): string {
+  const { h, s, l } = hexToHsl(primary);
+  return hslToHex(h, Math.max(s - 15, 40), Math.min(l + 20, 80));
+}
+
+/** Retorna blanco o negro según la luminancia percibida del fondo */
+function getContrastColor(bgColor: string): string {
+  if (bgColor.startsWith("#") && bgColor.length >= 7) {
+    const r = parseInt(bgColor.slice(1, 3), 16);
+    const g = parseInt(bgColor.slice(3, 5), 16);
+    const b = parseInt(bgColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? "#000000" : "#ffffff";
+  }
+  return "#ffffff";
+}
+
+/** Genera ETag para cache basado en tenant */
 export function generateETag(tenantId: string, updatedAt: Date | null): string {
-  const timestamp = updatedAt?.getTime() || 0;
+  const timestamp = updatedAt?.getTime() ?? 0;
   return `"theme-${tenantId}-${timestamp}"`;
 }
 
-/**
- * CSS por defecto para desarrollo/público
- */
+/** CSS por defecto para desarrollo / landing */
 export function getDefaultCSS(): string {
   return generateTenantCSS(null);
 }

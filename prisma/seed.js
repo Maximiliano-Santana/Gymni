@@ -3,59 +3,70 @@ const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const db = new PrismaClient();
 
-const theme = {
+// ── Themes ───────────────────────────────────────────────────────────────────
+
+const devGymTheme = {
   version: "1.0.0",
+  mode: "dark",
   metadata: {
     name: "Dev Gym",
     description: "Tema carbón y morado",
   },
   colors: {
-    primary: "#7c3aed",       // morado vivo (violet-600)
-    secondary: "#a78bfa",     // morado claro (violet-400)
-    accent: "#6d28d9",        // morado profundo (violet-700)
-    success: "#22c55e",
-    warning: "#f87171",
-    background: {
-      primary: "#18181b",     // carbón oscuro (zinc-900)
-      secondary: "#52525b",   // base para escala de grises (zinc-600)
-      card: "#27272a",        // carbón medio (zinc-800)
-    },
-    text: {
-      primary: "#fafafa",     // blanco suave (zinc-50)
-      secondary: "#a1a1aa",   // gris claro (zinc-400)
-      muted: "#71717a",       // gris apagado (zinc-500)
-    },
-    border: {
-      default: "#3f3f46",     // zinc-700
-      focus: "#a78bfa",       // morado claro para focus rings
-    },
+    primary:   "#7c3aed",  // violet-600
+    secondary: "#a78bfa",  // violet-400
+    grayBase:  "#52525b",  // zinc-600 — genera escala de grises fría
+    success:   "#22c55e",
+    warning:   "#f87171",
   },
   layout: {
     borderRadius: { base: "0.5rem" },
   },
 };
 
+const greenGymTheme = {
+  version: "1.0.0",
+  mode: "light",
+  metadata: {
+    name: "Green Gym",
+    description: "Tema claro con verde",
+  },
+  colors: {
+    primary:   "#16a34a",  // green-600
+    secondary: "#0d9488",  // teal-600 — complementa al verde
+    grayBase:  "#6b7280",  // gray-500 — gris neutro
+    success:   "#22c55e",
+    warning:   "#f87171",
+  },
+  layout: {
+    borderRadius: { base: "0.625rem" },
+  },
+};
+
+// ── Seed ─────────────────────────────────────────────────────────────────────
+
 async function main() {
   if (process.env.NODE_ENV === "production") {
     console.log("⛔ Seed bloqueado en producción.");
     return;
   }
-  const tenant = await db.tenant.upsert({
+
+  const hashedPassword = await bcrypt.hash("tashamaria123*d", 10);
+
+  // ── Dev Gym (dark + morado) ────────────────────────────────────────────
+  const devGym = await db.tenant.upsert({
     where: { subdomain: "dev-gym" },
-    update: { name: "Dev Gym", address: "michiland", settings: theme },
+    update: { name: "Dev Gym", address: "michiland", settings: devGymTheme },
     create: {
       name: "Dev Gym",
       address: "michiland",
       subdomain: "dev-gym",
-      settings: theme,
+      settings: devGymTheme,
     },
   });
-  console.log("✅ Seed OK:", { id: tenant.id, subdomain: tenant.subdomain });
+  console.log("✅ Tenant:", { id: devGym.id, subdomain: devGym.subdomain });
 
-  // Usuario OWNER para dev-gym
-  // Credenciales: admin@gmail.com / tashamaria123*d
-  const hashedPassword = await bcrypt.hash("tashamaria123*d", 10);
-  const owner = await db.user.upsert({
+  const devOwner = await db.user.upsert({
     where: { email: "admin@gmail.com" },
     update: { password: hashedPassword },
     create: {
@@ -65,12 +76,42 @@ async function main() {
     },
   });
   await db.tenantUser.upsert({
-    where: { userId_tenantId: { userId: owner.id, tenantId: tenant.id } },
+    where: { userId_tenantId: { userId: devOwner.id, tenantId: devGym.id } },
     update: {},
-    create: { userId: owner.id, tenantId: tenant.id, roles: ["OWNER"] },
+    create: { userId: devOwner.id, tenantId: devGym.id, roles: ["OWNER"] },
   });
-  console.log("✅ Seed OK: usuario OWNER creado →", owner.email);
+  console.log("✅ Owner dev-gym:", devOwner.email);
 
+  // ── Green Gym (light + verde) ──────────────────────────────────────────
+  const greenGym = await db.tenant.upsert({
+    where: { subdomain: "green-gym" },
+    update: { name: "Green Gym", address: "ecoland", settings: greenGymTheme },
+    create: {
+      name: "Green Gym",
+      address: "ecoland",
+      subdomain: "green-gym",
+      settings: greenGymTheme,
+    },
+  });
+  console.log("✅ Tenant:", { id: greenGym.id, subdomain: greenGym.subdomain });
+
+  const greenOwner = await db.user.upsert({
+    where: { email: "green@gmail.com" },
+    update: { password: hashedPassword },
+    create: {
+      name: "Admin Green",
+      email: "green@gmail.com",
+      password: hashedPassword,
+    },
+  });
+  await db.tenantUser.upsert({
+    where: { userId_tenantId: { userId: greenOwner.id, tenantId: greenGym.id } },
+    update: {},
+    create: { userId: greenOwner.id, tenantId: greenGym.id, roles: ["OWNER"] },
+  });
+  console.log("✅ Owner green-gym:", greenOwner.email);
+
+  // ── Plan BASIC ─────────────────────────────────────────────────────────
   const plan = await db.plan.upsert({
     where: { code: "BASIC" },
     update: {
@@ -105,7 +146,7 @@ async function main() {
     ],
     skipDuplicates: true,
   });
-  console.log("✅ Seed OK:", { id: plan.name });
+  console.log("✅ Plan:", plan.name);
 }
 
 main()

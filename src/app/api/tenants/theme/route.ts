@@ -6,8 +6,10 @@ import db from '../../../../lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const tenantSubdomain = request.headers.get('x-tenant-subdomain');
-    
+    // Query param ?tenant= permite forzar un tenant (útil para theme preview)
+    const tenantParam = request.nextUrl.searchParams.get('tenant');
+    const tenantSubdomain = tenantParam || request.headers.get('x-tenant-subdomain');
+
     // Caso 1: Desarrollo o sin tenant (landing page)
     if (!tenantSubdomain || tenantSubdomain === 'localhost') {
       const defaultCSS = getDefaultCSS();
