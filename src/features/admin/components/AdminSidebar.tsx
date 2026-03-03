@@ -7,6 +7,7 @@ import {
   Users,
   UserCog,
   CreditCard,
+  Receipt,
   Settings,
 } from "lucide-react";
 import {
@@ -32,6 +33,7 @@ const NAV_ITEMS: {
 }[] = [
   { page: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { page: "members", label: "Miembros", href: "/admin/members", icon: Users },
+  { page: "payments", label: "Pagos", href: "/admin/payments", icon: Receipt },
   { page: "staff", label: "Staff", href: "/admin/staff", icon: UserCog },
   { page: "plans", label: "Planes", href: "/admin/plans", icon: CreditCard },
   { page: "settings", label: "Configuración", href: "/admin/settings", icon: Settings },
