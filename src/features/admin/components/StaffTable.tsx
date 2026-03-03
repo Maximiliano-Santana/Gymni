@@ -49,9 +49,11 @@ const ROLE_COLORS: Record<string, "default" | "secondary" | "destructive" | "out
 export default function StaffTable({
   initialStaff,
   userRoles,
+  tenantId,
 }: {
   initialStaff: StaffMember[];
   userRoles: TenantRole[];
+  tenantId: string;
 }) {
   const router = useRouter();
   const isOwner = userRoles.includes("OWNER");
@@ -77,7 +79,7 @@ export default function StaffTable({
       const res = await fetch("/api/auth/invitation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole, tenantId }),
       });
       if (!res.ok) {
         const data = await res.json();
