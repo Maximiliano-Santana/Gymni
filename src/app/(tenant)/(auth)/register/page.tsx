@@ -23,7 +23,7 @@ export default async function RegisterPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RegisterForm tenantId={tenant?.id} />
+          <RegisterForm tenantId={tenant?.id} tenant={tenant} />
         </CardContent>
       </Card>
     </>

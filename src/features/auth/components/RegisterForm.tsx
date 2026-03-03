@@ -9,14 +9,24 @@ import { useForm } from "react-hook-form";
 import { RegisterDTO, RegisterSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
 import { register } from "../lib/api";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { isStaffRole } from "@/features/auth/lib";
+import type { TenantRole } from "@prisma/client";
+import type { TenantTyped } from "@/features/tenants/types/settings";
 
 export default function RegisterForm({
   tenantId = "",
+  tenant,
 }: {
   tenantId: string | undefined;
+  tenant?: TenantTyped | null;
 }) {
   const invitation = useSearchParams().get('invitation') || undefined
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<RegisterDTO>({
     resolver: zodResolver(RegisterSchema),
@@ -29,15 +39,41 @@ export default function RegisterForm({
     },
   });
 
-  // useEffect(()=>{console.log(tenantId)},[])
-
   async function onSubmit(values: RegisterDTO) {
-    console.log(values);
+    setSubmitting(true);
     try {
-      const res = await register(values);
-      console.log(res);
-    } catch (e: any) {
-      console.log(e.message);
+      await register(values);
+
+      // Auto-login after successful registration
+      const loginRes = await signIn("credentials", {
+        email: values.email,
+        password: values.password,
+        tenantId: values.tenantId,
+        redirect: false,
+      });
+
+      if (loginRes?.error) {
+        // Registered but login failed — send to login page
+        router.push("/login");
+        return;
+      }
+
+      // Redirect based on context
+      if (!tenant) {
+        router.push("/app");
+        return;
+      }
+
+      // For tenant context, check roles to decide where to go
+      // After fresh registration with invitation, they'll have the invited role
+      // We need to refresh the session to get updated tenant info
+      const subdomain = tenant.subdomain;
+      router.push(invitation ? "/admin" : "/dashboard");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Error al registrar";
+      form.setError("root", { message: msg });
+    } finally {
+      setSubmitting(false);
     }
   }
   return (
@@ -103,7 +139,9 @@ export default function RegisterForm({
                 )}
               />
             </div>
-            <Button variant={"default"}>Clickeable</Button>
+            <Button variant="default" type="submit" disabled={submitting}>
+              {submitting ? "Registrando..." : "Registrarse"}
+            </Button>
             {form.formState.errors.root?.message && (
               <p className="text-sm text-red-500">
                 {form.formState.errors.root.message}
