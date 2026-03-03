@@ -1,20 +1,13 @@
 // tenant-context.tsx
 "use client";
 import { createContext, useContext } from "react";
-
-type Tenant = {
-  id: string;
-  name: string;
-  subdomain: string;
-  theme?: any;
-  settings?: any;
-};
+import type { TenantTyped } from "@/features/tenants/types/settings";
 
 // El contexto puede ser null si aún no hay tenant
-const TenantContext = createContext<Tenant | null>(null);
+const TenantContext = createContext<TenantTyped | null>(null);
 
 // Provider: envuelve tus componentes
-export function TenantProvider({ value, children }: { value: Tenant; children: React.ReactNode }) {
+export function TenantProvider({ value, children }: { value: TenantTyped | null; children: React.ReactNode }) {
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }
 

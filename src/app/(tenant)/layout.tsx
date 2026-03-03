@@ -3,10 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Providers } from "../providers";
 import { headers } from "next/headers";
-import { validateTenantSubdomain } from "@/features/tenants/lib";
-import db from "@/lib/prisma";
-import { TenantSettings } from "@/features/tenants/types/settings";
-import type { Tenant } from "@prisma/client";
+import { getTenantBySubdomain, validateTenantSubdomain } from "@/features/tenants/lib";
+import { getTenantSettings } from "@/features/tenants/types/settings";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,19 +18,16 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   const h = await headers();
-  const host = h.get("host") || "";
-  const sub = h.get("x-tenant-subdomain") ?? host.split(".")[0];
+  const sub = h.get("x-tenant-subdomain") ?? h.get("host")?.split(".")[0] ?? "";
 
-  const tenant = await db.tenant.findUnique({
-    where: { subdomain: sub },
-  });
-  const settings = tenant?.settings as unknown as TenantSettings | null;
+  const tenant = await getTenantBySubdomain(sub);
+  const settings = tenant ? getTenantSettings(tenant) : null;
 
   return {
     title: tenant?.name || "Gym&i",
     description: "El mejor software para tu gimnasio.",
     icons: {
-      icon: settings?.assets?.favicon ||"/vercel.svg"
+      icon: settings?.assets?.favicon || "/vercel.svg"
     }
   }
 }
@@ -44,8 +39,11 @@ export default async function TenantLayout({
 }>) {
   const tenant = await validateTenantSubdomain();
 
+  const settings = tenant ? getTenantSettings(tenant) : null;
+  const isDark = settings?.mode === "dark";
+
   return (
-    <html lang="en">
+    <html lang="en" className={isDark ? "dark" : ""}>
       <head>
         <link rel="stylesheet" href="/api/tenants/theme" precedence="high" />
       </head>

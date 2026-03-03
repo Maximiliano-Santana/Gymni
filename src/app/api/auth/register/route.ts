@@ -199,5 +199,10 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   }
+
+  return NextResponse.json(
+    { message: "No se pudo procesar el registro." },
+    { status: 400 }
+  );
 }
 

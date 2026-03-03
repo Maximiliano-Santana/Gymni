@@ -4,6 +4,7 @@ import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../lib/validation";
 import { z } from "zod";
 import type { TenantRole } from "@prisma/client";
+import { STAFF_ROLES } from "@/features/auth/lib";
 
 export async function GET(request: Request) {
   try {
@@ -63,7 +64,7 @@ export async function DELETE(request: Request) {
     }
 
     const ids = parsed.data as string[];
-    const STAFF_ROLES: TenantRole[] = ["OWNER", "ADMIN", "STAFF"];
+
 
     const results = await db.$transaction(async (tx) => {
       // Obtener registros del tenant

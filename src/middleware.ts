@@ -3,14 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const isProtected = (p: string) =>
-  p.startsWith("/dashboard") || p.startsWith("/api/protected");
+  p.startsWith("/dashboard") || p.startsWith("/admin") || p.startsWith("/app") || p.startsWith("/api/protected");
+
+const isTenantOnly = (p: string) =>
+  p.startsWith("/dashboard") || p.startsWith("/admin");
+
+const isPlatformOnly = (p: string) =>
+  p.startsWith("/app");
 
 function computeSubdomain(hostname: string): string | null {
   const host = hostname.split(":")[0];
 
-  // Dev: localhost sin subdominio → dev-gym, acme.localhost → "acme"
   if (process.env.NODE_ENV === "development") {
+    // acme.localhost → "acme"
     if (host.endsWith(".localhost")) return host.slice(0, -".localhost".length);
+    // ngrok / cualquier tunnel sin subdominio real → default dev tenant
+    if (host.endsWith(".ngrok-free.app") || host.endsWith(".ngrok-free.dev") || host.endsWith(".ngrok.io")) return "dev-gym";
   }
 
   const parts = host.split(".");
@@ -36,7 +44,15 @@ export default async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-tenant-subdomain", sub || '');
 
-  // 2) Auth SOLO si la ruta es protegida
+  // 2) Rutas que no corresponden al dominio actual
+  if (!sub && isTenantOnly(pathname)) {
+    return NextResponse.redirect(new URL("/app", req.url));
+  }
+  if (sub && isPlatformOnly(pathname)) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // 3) Auth SOLO si la ruta es protegida
   if (isProtected(pathname)) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {

@@ -7,10 +7,8 @@ import {
 } from "@/components/ui/card";
 import LoginForm from "@/features/auth/components/LoginForm";
 import { validateTenantSubdomain } from "@/features/tenants/lib";
-import { Tenant } from "@prisma/client";
-
 export default async function LoginPage() {
-  const tenant: Tenant | null = await validateTenantSubdomain();
+  const tenant = await validateTenantSubdomain();
 
   return (
     <>
