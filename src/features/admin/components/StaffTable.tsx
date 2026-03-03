@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Plus, Trash2 } from "lucide-react";
 
 type StaffMember = {
   id: string;
@@ -71,9 +71,12 @@ export default function StaffTable({
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
+  const [copied, setCopied] = useState(false);
 
   async function handleInvite() {
     setError("");
+    setInviteLink("");
     setInviting(true);
     try {
       const res = await fetch("/api/auth/invitation", {
@@ -81,17 +84,38 @@ export default function StaffTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail, role: inviteRole, tenantId }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         setError(data.message ?? "Error al invitar");
         return;
       }
-      setInviteOpen(false);
-      setInviteEmail("");
-      router.refresh();
+      // If user already existed, they were added directly — no link needed
+      if (data.invitation?.id) {
+        const link = `${window.location.origin}/register?invitation=${data.invitation.id}`;
+        setInviteLink(link);
+      } else {
+        // User already existed and was added directly
+        setInviteOpen(false);
+        setInviteEmail("");
+        router.refresh();
+      }
     } finally {
       setInviting(false);
     }
+  }
+
+  async function handleCopyLink() {
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleCloseInvite() {
+    setInviteOpen(false);
+    setInviteEmail("");
+    setInviteLink("");
+    setCopied(false);
+    if (inviteLink) router.refresh();
   }
 
   async function handleEditRoles() {
@@ -130,7 +154,7 @@ export default function StaffTable({
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <Dialog open={inviteOpen} onOpenChange={(open) => { if (!open) handleCloseInvite(); else setInviteOpen(true); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 size-4" />
@@ -141,32 +165,50 @@ export default function StaffTable({
             <DialogHeader>
               <DialogTitle>Invitar al staff</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Correo</Label>
-                <Input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="staff@email.com"
-                />
+            {inviteLink ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Invitación creada. Envía este link a <span className="font-medium text-foreground">{inviteEmail}</span> para que se registre:
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input value={inviteLink} readOnly className="text-xs" />
+                  <Button size="icon" variant="outline" onClick={handleCopyLink}>
+                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  </Button>
+                </div>
+                {copied && <p className="text-xs text-muted-foreground">Copiado al portapapeles</p>}
+                <Button onClick={handleCloseInvite} variant="outline" className="w-full">
+                  Cerrar
+                </Button>
               </div>
-              <div>
-                <Label>Rol</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="STAFF">Staff</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    {isOwner && <SelectItem value="OWNER">Owner</SelectItem>}
-                  </SelectContent>
-                </Select>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label>Correo</Label>
+                  <Input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="staff@email.com"
+                  />
+                </div>
+                <div>
+                  <Label>Rol</Label>
+                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STAFF">Staff</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      {isOwner && <SelectItem value="OWNER">Owner</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                <Button onClick={handleInvite} disabled={inviting || !inviteEmail} className="w-full">
+                  {inviting ? "Invitando..." : "Enviar invitación"}
+                </Button>
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button onClick={handleInvite} disabled={inviting || !inviteEmail} className="w-full">
-                {inviting ? "Invitando..." : "Enviar invitación"}
-              </Button>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
