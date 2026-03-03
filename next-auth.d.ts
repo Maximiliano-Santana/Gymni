@@ -1,10 +1,8 @@
-// types/next-auth.d.ts
 import "next-auth";
 import "next-auth/jwt";
 import type { TenantRole } from "@prisma/client";
 
-type TenantsMap = Record<string, { tenantId: string; roles: TenantRole[] }>; // subdomain -> info
-type TenantsRolesMap = Record<string, TenantRole[]>; // subdomain -> roles (compat)
+type TenantsMap = Record<string, { tenantId: string; roles: TenantRole[] }>;
 
 declare module "next-auth" {
   interface Session {
@@ -13,8 +11,8 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       image?: string | null;
-      systemRole: "USER" | "SUPER_ADMIN";      // 👈 subdominio -> roles[] (compatibilidad)
-      tenants?: TenantsMap;     // 👈 subdominio -> { tenantId, roles }
+      systemRole: "USER" | "SUPER_ADMIN";
+      tenants?: TenantsMap;
     };
   }
 
@@ -22,7 +20,7 @@ declare module "next-auth" {
     id: string;
     email: string;
     name?: string | null;
-    systemRole: "USER" | "SUPER_ADMIN";
+    systemRole?: "USER" | "SUPER_ADMIN";
   }
 }
 
@@ -30,6 +28,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     sub?: string;
     systemRole?: "USER" | "SUPER_ADMIN";
-    tenants?: TenantsMap;           // 👈 subdominio -> { tenantId, roles }
+    tenants?: TenantsMap;
   }
 }
