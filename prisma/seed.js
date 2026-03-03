@@ -147,6 +147,261 @@ async function main() {
     skipDuplicates: true,
   });
   console.log("✅ Plan:", plan.name);
+
+  // ── Membership Plans for dev-gym ──────────────────────────────────────
+  await db.memberPayment.deleteMany({ where: { tenantId: devGym.id } });
+  await db.memberInvoice.deleteMany({ where: { tenantId: devGym.id } });
+  await db.memberSubscription.deleteMany({ where: { tenantId: devGym.id } });
+  await db.membershipPrice.deleteMany({
+    where: { plan: { tenantId: devGym.id } },
+  });
+  await db.membershipPlan.deleteMany({ where: { tenantId: devGym.id } });
+
+  const basicPlan = await db.membershipPlan.create({
+    data: {
+      tenantId: devGym.id,
+      code: "BASICO",
+      name: "Básico",
+      description: "Acceso general al gimnasio",
+    },
+  });
+  const premiumPlan = await db.membershipPlan.create({
+    data: {
+      tenantId: devGym.id,
+      code: "PREMIUM",
+      name: "Premium",
+      description: "Acceso completo + clases grupales",
+    },
+  });
+
+  // Precios: mensual, trimestral, anual
+  const basicMonthly = await db.membershipPrice.create({
+    data: {
+      planId: basicPlan.id,
+      interval: "MONTH",
+      intervalCount: 1,
+      amountCents: 49900,
+      currency: "MXN",
+    }, // $499 MXN
+  });
+  await db.membershipPrice.create({
+    data: {
+      planId: basicPlan.id,
+      interval: "MONTH",
+      intervalCount: 3,
+      amountCents: 129900,
+      currency: "MXN",
+    }, // $1,299 MXN trimestral
+  });
+  await db.membershipPrice.create({
+    data: {
+      planId: basicPlan.id,
+      interval: "YEAR",
+      intervalCount: 1,
+      amountCents: 449900,
+      currency: "MXN",
+    }, // $4,499 MXN anual
+  });
+
+  const premiumMonthly = await db.membershipPrice.create({
+    data: {
+      planId: premiumPlan.id,
+      interval: "MONTH",
+      intervalCount: 1,
+      amountCents: 79900,
+      currency: "MXN",
+    }, // $799 MXN
+  });
+  await db.membershipPrice.create({
+    data: {
+      planId: premiumPlan.id,
+      interval: "MONTH",
+      intervalCount: 3,
+      amountCents: 209900,
+      currency: "MXN",
+    }, // $2,099 MXN trimestral
+  });
+  await db.membershipPrice.create({
+    data: {
+      planId: premiumPlan.id,
+      interval: "YEAR",
+      intervalCount: 1,
+      amountCents: 749900,
+      currency: "MXN",
+    }, // $7,499 MXN anual
+  });
+  console.log("✅ Membership Plans:", basicPlan.name, premiumPlan.name);
+
+  // ── Sample Members for dev-gym ────────────────────────────────────────
+  const memberEmails = [
+    { name: "Carlos López", email: "carlos@test.com" },
+    { name: "María García", email: "maria@test.com" },
+    { name: "Juan Rodríguez", email: "juan@test.com" },
+    { name: "Ana Martínez", email: "ana@test.com" },
+    { name: "Pedro Sánchez", email: "pedro@test.com" },
+  ];
+
+  const members = [];
+  for (const m of memberEmails) {
+    const user = await db.user.upsert({
+      where: { email: m.email },
+      update: { password: hashedPassword },
+      create: { name: m.name, email: m.email, password: hashedPassword },
+    });
+    const tu = await db.tenantUser.upsert({
+      where: {
+        userId_tenantId: { userId: user.id, tenantId: devGym.id },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        tenantId: devGym.id,
+        roles: ["MEMBER"],
+      },
+    });
+    members.push(tu);
+  }
+  console.log("✅ Members:", members.length);
+
+  // ── Sample Subscriptions + Invoices + Payments ────────────────────────
+  const now = new Date();
+  const inOneMonth = new Date(now);
+  inOneMonth.setMonth(inOneMonth.getMonth() + 1);
+  const inThreeMonths = new Date(now);
+  inThreeMonths.setMonth(inThreeMonths.getMonth() + 3);
+  const lastMonth = new Date(now);
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+  // Carlos: Básico mensual — activo, pagado
+  const sub1 = await db.memberSubscription.create({
+    data: {
+      tenantId: devGym.id,
+      tenantUserId: members[0].id,
+      planId: basicPlan.id,
+      priceId: basicMonthly.id,
+      status: "ACTIVE",
+      billingEndsAt: inOneMonth,
+    },
+  });
+  const inv1 = await db.memberInvoice.create({
+    data: {
+      tenantId: devGym.id,
+      subscriptionId: sub1.id,
+      amountCents: 49900,
+      currency: "MXN",
+      status: "paid",
+      issuedAt: now,
+      planId: basicPlan.id,
+      priceId: basicMonthly.id,
+    },
+  });
+  await db.memberPayment.create({
+    data: {
+      tenantId: devGym.id,
+      invoiceId: inv1.id,
+      method: "CASH",
+      amountCents: 49900,
+      paidAt: now,
+      receivedBy: "Admin Dev",
+    },
+  });
+
+  // María: Premium mensual — activo, pagado
+  const sub2 = await db.memberSubscription.create({
+    data: {
+      tenantId: devGym.id,
+      tenantUserId: members[1].id,
+      planId: premiumPlan.id,
+      priceId: premiumMonthly.id,
+      status: "ACTIVE",
+      billingEndsAt: inOneMonth,
+    },
+  });
+  const inv2 = await db.memberInvoice.create({
+    data: {
+      tenantId: devGym.id,
+      subscriptionId: sub2.id,
+      amountCents: 79900,
+      currency: "MXN",
+      status: "paid",
+      issuedAt: now,
+      planId: premiumPlan.id,
+      priceId: premiumMonthly.id,
+    },
+  });
+  await db.memberPayment.create({
+    data: {
+      tenantId: devGym.id,
+      invoiceId: inv2.id,
+      method: "TRANSFER",
+      amountCents: 79900,
+      paidAt: now,
+      reference: "TRF-001",
+      receivedBy: "Admin Dev",
+    },
+  });
+
+  // Juan: Básico — PAST_DUE (venció hace 1 mes, invoice abierta)
+  const sub3 = await db.memberSubscription.create({
+    data: {
+      tenantId: devGym.id,
+      tenantUserId: members[2].id,
+      planId: basicPlan.id,
+      priceId: basicMonthly.id,
+      status: "PAST_DUE",
+      billingEndsAt: lastMonth,
+    },
+  });
+  await db.memberInvoice.create({
+    data: {
+      tenantId: devGym.id,
+      subscriptionId: sub3.id,
+      amountCents: 49900,
+      currency: "MXN",
+      status: "open",
+      issuedAt: lastMonth,
+      dueAt: now,
+      planId: basicPlan.id,
+      priceId: basicMonthly.id,
+    },
+  });
+
+  // Ana: Premium — activo, pagado con tarjeta
+  const sub4 = await db.memberSubscription.create({
+    data: {
+      tenantId: devGym.id,
+      tenantUserId: members[3].id,
+      planId: premiumPlan.id,
+      priceId: premiumMonthly.id,
+      status: "ACTIVE",
+      billingEndsAt: inThreeMonths,
+    },
+  });
+  const inv4 = await db.memberInvoice.create({
+    data: {
+      tenantId: devGym.id,
+      subscriptionId: sub4.id,
+      amountCents: 79900,
+      currency: "MXN",
+      status: "paid",
+      issuedAt: now,
+      planId: premiumPlan.id,
+      priceId: premiumMonthly.id,
+    },
+  });
+  await db.memberPayment.create({
+    data: {
+      tenantId: devGym.id,
+      invoiceId: inv4.id,
+      method: "CARD",
+      amountCents: 79900,
+      paidAt: now,
+      receivedBy: "Admin Dev",
+    },
+  });
+
+  // Pedro: sin suscripción (miembro registrado pero sin plan)
+  console.log("✅ Subscriptions + Invoices + Payments seeded");
 }
 
 main()

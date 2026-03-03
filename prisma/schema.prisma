@@ -43,10 +43,15 @@ model Tenant {
   updatedAt    DateTime @updatedAt @default(now())
   users        TenantUser[]
   invitations  Invitation[]
-  // Billing
+  // Billing (Platform)
   subscriptions Subscription[]
   invoices      Invoice[]
   payments      Payment[]
+  // Billing (Member)
+  membershipPlans     MembershipPlan[]
+  memberSubscriptions MemberSubscription[]
+  memberInvoices      MemberInvoice[]
+  memberPayments      MemberPayment[]
 
   @@map("tenants")
 }
@@ -116,6 +121,7 @@ model TenantUser {
 
   roles TenantRole[] @default([])
   status TenantUserStatus @default(ACTIVE)
+  memberSubscriptions MemberSubscription[]
 
   @@unique([userId, tenantId])
 }
@@ -257,9 +263,111 @@ model Payment {
 // Billing (Member ↔ Tenant)
 // ===============================
 
-model MembershipPlan {
-  id String @id @default(cuid())
-  tenantId String
-  name String
+enum MemberSubStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
 
+model MembershipPlan {
+  id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+  code        String
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+  limits      Json?
+  prices      MembershipPrice[]
+  subscriptions MemberSubscription[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+
+  @@unique([tenantId, code])
+  @@map("membership_plans")
+  @@index([tenantId, isActive])
+}
+
+model MembershipPrice {
+  id              String  @id @default(cuid())
+  planId          String
+  plan            MembershipPlan @relation(fields: [planId], references: [id])
+  interval        BillingInterval
+  intervalCount   Int     @default(1) // 1=mensual, 3=trimestral, 12=anual
+  amountCents     Int
+  currency        String  @default("MXN")
+  isActive        Boolean @default(true)
+  providerPriceId   String? // Stripe price_id futuro
+  providerProductId String? // Stripe product_id futuro
+  subscriptions   MemberSubscription[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt @default(now())
+
+  @@map("membership_prices")
+  @@index([planId, interval, isActive])
+}
+
+model MemberSubscription {
+  id              String  @id @default(cuid())
+  tenantId        String
+  tenant          Tenant  @relation(fields: [tenantId], references: [id])
+  tenantUserId    String
+  tenantUser      TenantUser @relation(fields: [tenantUserId], references: [id])
+  planId          String
+  plan            MembershipPlan @relation(fields: [planId], references: [id])
+  priceId         String
+  price           MembershipPrice @relation(fields: [priceId], references: [id])
+  status          MemberSubStatus @default(ACTIVE)
+  billingEndsAt   DateTime
+  canceledAt      DateTime?
+  providerSubId   String? @unique // Stripe sub_id futuro
+  invoices        MemberInvoice[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt @default(now())
+
+  @@map("member_subscriptions")
+  @@index([tenantId, status])
+  @@index([tenantUserId])
+}
+
+model MemberInvoice {
+  id               String  @id @default(cuid())
+  tenantId         String
+  tenant           Tenant  @relation(fields: [tenantId], references: [id])
+  subscriptionId   String
+  subscription     MemberSubscription @relation(fields: [subscriptionId], references: [id])
+  amountCents      Int
+  currency         String  @default("MXN")
+  status           InvoiceStatus @default(open)
+  issuedAt         DateTime @default(now())
+  dueAt            DateTime?
+  // snapshots
+  planId           String
+  priceId          String
+  payments         MemberPayment[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt @default(now())
+
+  @@map("member_invoices")
+  @@index([tenantId, status])
+  @@index([subscriptionId])
+}
+
+model MemberPayment {
+  id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+  invoiceId   String
+  invoice     MemberInvoice @relation(fields: [invoiceId], references: [id])
+  method      PaymentMethod
+  amountCents Int
+  paidAt      DateTime
+  reference   String?
+  receivedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+
+  @@map("member_payments")
+  @@index([tenantId, paidAt])
+  @@unique([invoiceId, reference])
 }
