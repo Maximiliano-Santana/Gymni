@@ -20,4 +20,5 @@ export type CheckInMemberInfo = {
     billingEndsAt: string;
   } | null;
   lastCheckIn: string | null; // ISO date if already checked in today, null otherwise
+  warning: string | null;
 };

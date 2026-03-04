@@ -1,6 +1,9 @@
 import db from "@/lib/prisma";
+import { getTenantSettings } from "@/features/tenants/types/settings";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+
+const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
 export async function POST(request: Request) {
   if ((await headers()).get("x-cron-key") !== process.env.CRON_KEY)
@@ -8,6 +11,21 @@ export async function POST(request: Request) {
 
   const now = new Date();
 
+  // ─── Platform billing (Gymni → Tenant) ───
+  const platformStats = await processPlatformBilling(now);
+
+  // ─── Member billing (Tenant → Member) ───
+  const memberStats = await processMemberBilling(now);
+
+  return NextResponse.json(
+    { message: "Cron executed", platform: platformStats, member: memberStats },
+    { status: 200 }
+  );
+}
+
+// ─── Platform billing (unchanged logic) ───
+
+async function processPlatformBilling(now: Date) {
   const endedSubscriptions = await db.subscription.findMany({
     where: { status: "active", currentPeriodEnd: { lte: now } },
     select: {
@@ -30,7 +48,6 @@ export async function POST(request: Request) {
     take: 500,
   });
 
-  // --- métricas de ejecución ---
   const stats = {
     processedSubs: endedSubscriptions.length,
     createdInvoices: 0,
@@ -42,7 +59,6 @@ export async function POST(request: Request) {
 
   for (const subscription of endedSubscriptions) {
     if (!subscription.invoices[0]) {
-      const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
       const trialDays = 0;
       const graceDays = 3;
 
@@ -74,14 +90,11 @@ export async function POST(request: Request) {
 
       stats.createdInvoices += 1;
       stats.createdInvoiceIds.push(invoice.id);
-
     } else if (
       subscription.invoices[0].dueAt &&
       subscription.invoices[0].dueAt < now
     ) {
-      // pendiente de pago (overdue) -> solo contamos alerta
       stats.overdueAlerts += 1;
-
     } else if (
       subscription.invoices[0].dueAt &&
       subscription.invoices[0].dueAt > now
@@ -96,11 +109,140 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json(
-    {
-      message: "Cron executed",
-      ...stats,
+  return stats;
+}
+
+// ─── Member billing (Tenant → Member) ───
+
+function computeNextBillingEnd(
+  current: Date,
+  interval: "MONTH" | "YEAR",
+  intervalCount: number
+): Date {
+  const next = new Date(current);
+  if (interval === "MONTH") {
+    next.setMonth(next.getMonth() + intervalCount);
+  } else {
+    next.setFullYear(next.getFullYear() + intervalCount);
+  }
+  return next;
+}
+
+async function processMemberBilling(now: Date) {
+  const stats = {
+    renewals: 0,
+    pastDue: 0,
+    canceled: 0,
+  };
+
+  // Fetch all ACTIVE subs past their billingEndsAt, and PAST_DUE subs
+  const subs = await db.memberSubscription.findMany({
+    where: {
+      OR: [
+        { status: "ACTIVE", billingEndsAt: { lte: now } },
+        { status: "PAST_DUE" },
+      ],
     },
-    { status: 200 }
-  );
+    include: {
+      tenant: { select: { id: true, settings: true } },
+      price: {
+        select: {
+          id: true,
+          planId: true,
+          interval: true,
+          intervalCount: true,
+          amountCents: true,
+          currency: true,
+        },
+      },
+      invoices: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { id: true, status: true, dueAt: true },
+      },
+    },
+    take: 500,
+  });
+
+  for (const sub of subs) {
+    const tenantSettings = getTenantSettings(sub.tenant);
+    const graceDays = tenantSettings?.billing?.graceDays ?? 0;
+    const autoCancelDays = tenantSettings?.billing?.autoCancelDays ?? 0;
+
+    const lastInvoice = sub.invoices[0] ?? null;
+
+    if (sub.status === "ACTIVE") {
+      // Case A: Auto-renew — last invoice is paid
+      if (lastInvoice?.status === "paid") {
+        const newBillingEnd = computeNextBillingEnd(
+          sub.billingEndsAt,
+          sub.price.interval,
+          sub.price.intervalCount
+        );
+
+        await db.$transaction([
+          db.memberSubscription.update({
+            where: { id: sub.id },
+            data: { billingEndsAt: newBillingEnd },
+          }),
+          db.memberInvoice.create({
+            data: {
+              tenantId: sub.tenantId,
+              subscriptionId: sub.id,
+              amountCents: sub.price.amountCents,
+              currency: sub.price.currency,
+              status: "open",
+              issuedAt: now,
+              // Payment due at start of new period (= old billingEndsAt = now)
+              dueAt: sub.billingEndsAt,
+              planId: sub.price.planId,
+              priceId: sub.price.id,
+            },
+          }),
+        ]);
+
+        stats.renewals += 1;
+        continue;
+      }
+
+      // Case B: Mark PAST_DUE — invoice dueAt + graceDays has passed
+      if (
+        lastInvoice?.status === "open" &&
+        lastInvoice.dueAt &&
+        addDays(lastInvoice.dueAt, graceDays) <= now
+      ) {
+        await db.memberSubscription.update({
+          where: { id: sub.id },
+          data: { status: "PAST_DUE" },
+        });
+        stats.pastDue += 1;
+      }
+    } else if (sub.status === "PAST_DUE") {
+      // Case C: Auto-cancel — invoice dueAt + graceDays + autoCancelDays has passed
+      if (
+        autoCancelDays > 0 &&
+        lastInvoice?.dueAt &&
+        addDays(lastInvoice.dueAt, graceDays + autoCancelDays) <= now
+      ) {
+        const updates = [
+          db.memberSubscription.update({
+            where: { id: sub.id },
+            data: { status: "CANCELED", canceledAt: now },
+          }),
+        ];
+        if (lastInvoice.status === "open") {
+          updates.push(
+            db.memberInvoice.update({
+              where: { id: lastInvoice.id },
+              data: { status: "void" },
+            }) as never
+          );
+        }
+        await db.$transaction(updates);
+        stats.canceled += 1;
+      }
+    }
+  }
+
+  return stats;
 }

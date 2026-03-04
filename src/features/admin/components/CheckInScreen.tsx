@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle2, XCircle, ScanLine } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle, ScanLine } from "lucide-react";
 import type { CheckInMemberInfo } from "@/features/checkin/types";
 
 type ScreenState =
@@ -126,6 +126,12 @@ export default function CheckInScreen() {
               <p className="text-xs text-muted-foreground">
                 Vence: {new Date(state.member.subscription.billingEndsAt).toLocaleDateString("es-MX")}
               </p>
+            )}
+            {state.member.warning && (
+              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center gap-2">
+                <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
+                <p className="text-sm text-destructive font-medium">{state.member.warning}</p>
+              </div>
             )}
             <div className="flex gap-3 w-full mt-2">
               <Button variant="outline" className="flex-1" onClick={resetToScan} disabled={loading}>

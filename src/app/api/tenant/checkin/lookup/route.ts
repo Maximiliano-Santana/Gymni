@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
       include: {
         user: { select: { name: true, email: true, image: true } },
         memberSubscriptions: {
-          where: { status: { not: "CANCELED" } },
           orderBy: { createdAt: "desc" },
           take: 1,
           include: { plan: { select: { name: true } } },
@@ -52,6 +51,17 @@ export async function POST(request: NextRequest) {
 
     const activeSub = tu.memberSubscriptions[0] ?? null;
 
+    let warning: string | null = null;
+    if (!activeSub) {
+      warning = "Sin membresía activa";
+    } else if (activeSub.status === "PAST_DUE") {
+      warning = "Membresía con adeudo";
+    } else if (activeSub.status === "CANCELED") {
+      warning = "Membresía cancelada";
+    } else if (activeSub.billingEndsAt < new Date()) {
+      warning = "Membresía vencida";
+    }
+
     const data = {
       id: tu.id,
       name: tu.user.name,
@@ -68,6 +78,7 @@ export async function POST(request: NextRequest) {
       lastCheckIn: todayCheckIn
         ? todayCheckIn.checkedInAt.toISOString()
         : null,
+      warning,
     };
 
     return NextResponse.json({ data });

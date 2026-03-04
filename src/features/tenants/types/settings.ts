@@ -50,4 +50,9 @@ export interface TenantSettings {
     };
     favicon?: string;
   };
+
+  billing?: {
+    graceDays?: number;
+    autoCancelDays?: number;
+  };
 }

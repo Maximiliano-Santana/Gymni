@@ -26,6 +26,7 @@ export default async function SettingsPage() {
   if (!tenant) redirect("/admin");
 
   const settings = (tenant.settings as Record<string, unknown>) ?? {};
+  const billing = (settings.billing as Record<string, number>) ?? {};
 
   return (
     <div className="space-y-6">
@@ -36,6 +37,8 @@ export default async function SettingsPage() {
           address: tenant.address,
           mode: (settings.mode as string) ?? "light",
           primaryColor: ((settings.colors as Record<string, string>)?.primary) ?? "#f97316",
+          graceDays: billing.graceDays ?? 0,
+          autoCancelDays: billing.autoCancelDays ?? 0,
         }}
       />
     </div>

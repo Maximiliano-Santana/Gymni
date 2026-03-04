@@ -13,6 +13,8 @@ type SettingsData = {
   address: string;
   mode: string;
   primaryColor: string;
+  graceDays: number;
+  autoCancelDays: number;
 };
 
 export default function SettingsForm({ initialData }: { initialData: SettingsData }) {
@@ -21,6 +23,8 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [address, setAddress] = useState(initialData.address);
   const [mode, setMode] = useState(initialData.mode);
   const [primaryColor, setPrimaryColor] = useState(initialData.primaryColor);
+  const [graceDays, setGraceDays] = useState(initialData.graceDays);
+  const [autoCancelDays, setAutoCancelDays] = useState(initialData.autoCancelDays);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -37,6 +41,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
           settings: {
             mode,
             colors: { primary: primaryColor },
+            billing: { graceDays, autoCancelDays },
           },
         }),
       });
@@ -102,6 +107,42 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
                 style={{ backgroundColor: primaryColor }}
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Facturación</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Días de gracia</Label>
+            <p className="text-xs text-muted-foreground mb-1">
+              Días después del inicio del período para pagar antes de marcar como adeudo
+            </p>
+            <Input
+              type="number"
+              min={0}
+              max={30}
+              value={graceDays}
+              onChange={(e) => setGraceDays(Number(e.target.value))}
+              className="max-w-32"
+            />
+          </div>
+          <div>
+            <Label>Auto-cancelar después de (días)</Label>
+            <p className="text-xs text-muted-foreground mb-1">
+              Días en adeudo antes de cancelar la membresía automáticamente. 0 = nunca
+            </p>
+            <Input
+              type="number"
+              min={0}
+              max={365}
+              value={autoCancelDays}
+              onChange={(e) => setAutoCancelDays(Number(e.target.value))}
+              className="max-w-32"
+            />
           </div>
         </CardContent>
       </Card>

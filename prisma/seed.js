@@ -22,6 +22,10 @@ const devGymTheme = {
   layout: {
     borderRadius: { base: "0.5rem" },
   },
+  billing: {
+    graceDays: 3,
+    autoCancelDays: 30,
+  },
 };
 
 const greenGymTheme = {
@@ -264,15 +268,25 @@ async function main() {
   console.log("✅ Members:", members.length);
 
   // ── Sample Subscriptions + Invoices + Payments ────────────────────────
+  //
+  // Escenarios de billing para testear con el cron:
+  //   Carlos → ACTIVE, pagado, no vencido      → cron no hace nada (sano)
+  //   María  → ACTIVE, pagado, ya venció        → cron auto-renueva
+  //   Juan   → ACTIVE, open invoice, ya venció  → cron marca PAST_DUE
+  //   Ana    → PAST_DUE, open invoice vieja     → cron auto-cancela
+  //   Pedro  → sin suscripción                  → warning en check-in
+  //
   const now = new Date();
+  const addDays = (d, n) => new Date(d.getTime() + n * 86_400_000);
+
   const inOneMonth = new Date(now);
   inOneMonth.setMonth(inOneMonth.getMonth() + 1);
-  const inThreeMonths = new Date(now);
-  inThreeMonths.setMonth(inThreeMonths.getMonth() + 3);
-  const lastMonth = new Date(now);
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const yesterday = addDays(now, -1);
+  const fiveDaysAgo = addDays(now, -5);
+  const fortyDaysAgo = addDays(now, -40);
+  const twoMonthsAgo = addDays(now, -60);
 
-  // Carlos: Básico mensual — activo, pagado
+  // ── Carlos: Básico — ACTIVE, pagado, vence en 1 mes (sano, cron no toca) ──
   const sub1 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
@@ -291,6 +305,7 @@ async function main() {
       currency: "MXN",
       status: "paid",
       issuedAt: now,
+      dueAt: now,
       planId: basicPlan.id,
       priceId: basicMonthly.id,
     },
@@ -306,7 +321,7 @@ async function main() {
     },
   });
 
-  // María: Premium mensual — activo, pagado
+  // ── María: Premium — ACTIVE, pagado, venció ayer → cron auto-renueva ──
   const sub2 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
@@ -314,7 +329,7 @@ async function main() {
       planId: premiumPlan.id,
       priceId: premiumMonthly.id,
       status: "ACTIVE",
-      billingEndsAt: inOneMonth,
+      billingEndsAt: yesterday,
     },
   });
   const inv2 = await db.memberInvoice.create({
@@ -324,7 +339,8 @@ async function main() {
       amountCents: 79900,
       currency: "MXN",
       status: "paid",
-      issuedAt: now,
+      issuedAt: addDays(now, -30),
+      dueAt: addDays(now, -30),
       planId: premiumPlan.id,
       priceId: premiumMonthly.id,
     },
@@ -335,21 +351,22 @@ async function main() {
       invoiceId: inv2.id,
       method: "TRANSFER",
       amountCents: 79900,
-      paidAt: now,
+      paidAt: addDays(now, -30),
       reference: "TRF-001",
       receivedBy: "Admin Dev",
     },
   });
 
-  // Juan: Básico — PAST_DUE (venció hace 1 mes, invoice abierta)
+  // ── Juan: Básico — ACTIVE, invoice open, venció hace 5 días → cron marca PAST_DUE ──
+  // (con graceDays=3 default: dueAt hace 5 días + 3 grace = hace 2 días → ya pasó)
   const sub3 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
       tenantUserId: members[2].id,
       planId: basicPlan.id,
       priceId: basicMonthly.id,
-      status: "PAST_DUE",
-      billingEndsAt: lastMonth,
+      status: "ACTIVE",
+      billingEndsAt: fiveDaysAgo,
     },
   });
   await db.memberInvoice.create({
@@ -359,48 +376,40 @@ async function main() {
       amountCents: 49900,
       currency: "MXN",
       status: "open",
-      issuedAt: lastMonth,
-      dueAt: now,
+      issuedAt: addDays(now, -35),
+      dueAt: fiveDaysAgo,
       planId: basicPlan.id,
       priceId: basicMonthly.id,
     },
   });
 
-  // Ana: Premium — activo, pagado con tarjeta
+  // ── Ana: Premium — PAST_DUE, invoice open de hace 40 días → cron auto-cancela ──
+  // (con autoCancelDays=30 y graceDays=3: dueAt hace 40 + 3 + 30 = 33 necesarios, 40 > 33 → cancela)
   const sub4 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
       tenantUserId: members[3].id,
       planId: premiumPlan.id,
       priceId: premiumMonthly.id,
-      status: "ACTIVE",
-      billingEndsAt: inThreeMonths,
+      status: "PAST_DUE",
+      billingEndsAt: twoMonthsAgo,
     },
   });
-  const inv4 = await db.memberInvoice.create({
+  await db.memberInvoice.create({
     data: {
       tenantId: devGym.id,
       subscriptionId: sub4.id,
       amountCents: 79900,
       currency: "MXN",
-      status: "paid",
-      issuedAt: now,
+      status: "open",
+      issuedAt: twoMonthsAgo,
+      dueAt: fortyDaysAgo,
       planId: premiumPlan.id,
       priceId: premiumMonthly.id,
     },
   });
-  await db.memberPayment.create({
-    data: {
-      tenantId: devGym.id,
-      invoiceId: inv4.id,
-      method: "CARD",
-      amountCents: 79900,
-      paidAt: now,
-      receivedBy: "Admin Dev",
-    },
-  });
 
-  // Pedro: sin suscripción (miembro registrado pero sin plan)
+  // ── Pedro: sin suscripción (miembro registrado pero sin plan) ──
   console.log("✅ Subscriptions + Invoices + Payments seeded");
 }
 

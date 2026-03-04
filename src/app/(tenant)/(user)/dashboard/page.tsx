@@ -21,7 +21,7 @@ function StatusBadge({ status }: { status: string }) {
       className: "bg-primary/10 text-primary border-primary/30",
     },
     PAST_DUE: {
-      label: "Por vencer",
+      label: "Adeudo",
       className: "bg-destructive/10 text-destructive border-destructive/30",
     },
     CANCELED: {
@@ -52,6 +52,13 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatCurrency(amountCents: number, currency: string) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency,
+  }).format(amountCents / 100);
 }
 
 export default async function MemberDashboard() {
@@ -101,25 +108,51 @@ export default async function MemberDashboard() {
 
         {data.subscription ? (
           <Card className="sm:min-w-72 py-4">
-            <CardContent className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                  Membresía
-                </p>
-                <p className="text-lg font-bold text-foreground mt-0.5">
-                  {data.subscription.planName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Vence {formatDate(data.subscription.billingEndsAt)}
-                </p>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                    Membresía
+                  </p>
+                  <p className="text-lg font-bold text-foreground mt-0.5">
+                    {data.subscription.planName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Vence {formatDate(data.subscription.billingEndsAt)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <StatusBadge status={data.subscription.status} />
+                  <p className="text-2xl font-black text-primary mt-2">
+                    {data.subscription.daysLeft}
+                  </p>
+                  <p className="text-xs text-muted-foreground">días restantes</p>
+                </div>
               </div>
-              <div className="text-right">
-                <StatusBadge status={data.subscription.status} />
-                <p className="text-2xl font-black text-primary mt-2">
-                  {data.subscription.daysLeft}
-                </p>
-                <p className="text-xs text-muted-foreground">días restantes</p>
-              </div>
+              {data.subscription.invoice && (
+                <div
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    data.subscription.invoice.status === "paid"
+                      ? "bg-primary/5 border-primary/20 text-primary"
+                      : "bg-destructive/5 border-destructive/20 text-destructive"
+                  }`}
+                >
+                  {data.subscription.invoice.status === "paid" ? (
+                    <p className="font-medium">Al corriente</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">
+                        Pago pendiente: {formatCurrency(data.subscription.invoice.amountCents, data.subscription.invoice.currency)}
+                      </p>
+                      {data.subscription.invoice.dueAt && (
+                        <p className="mt-0.5 opacity-80">
+                          Fecha límite: {formatDate(data.subscription.invoice.dueAt)}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (

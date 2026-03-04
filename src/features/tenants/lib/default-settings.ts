@@ -23,4 +23,9 @@ export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
   assets: {
     favicon: "./dev-gym.svg",
   },
+
+  billing: {
+    graceDays: 0,
+    autoCancelDays: 0,
+  },
 };

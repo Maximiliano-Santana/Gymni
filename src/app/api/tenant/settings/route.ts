@@ -34,6 +34,12 @@ const PatchSchema = z.object({
           grayBase: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
         })
         .optional(),
+      billing: z
+        .object({
+          graceDays: z.number().int().min(0).max(30).optional(),
+          autoCancelDays: z.number().int().min(0).max(365).optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
@@ -65,6 +71,14 @@ export async function PATCH(request: Request) {
             ...((currentSettings.colors as Record<string, unknown>) ?? {}),
             ...(settings.colors ?? {}),
           },
+          ...(settings.billing !== undefined
+            ? {
+                billing: {
+                  ...((currentSettings.billing as Record<string, unknown>) ?? {}),
+                  ...settings.billing,
+                },
+              }
+            : {}),
         }
       : undefined;
 

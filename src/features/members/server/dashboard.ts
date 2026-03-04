@@ -8,6 +8,12 @@ export type MemberDashboardData = {
     status: string;
     billingEndsAt: string;
     daysLeft: number;
+    invoice: {
+      status: string;
+      amountCents: number;
+      currency: string;
+      dueAt: string | null;
+    } | null;
   } | null;
   attendance: {
     thisMonth: number;
@@ -124,12 +130,25 @@ export async function getMemberDashboardData(
   const [subscription, thisMonthCount, lastMonthCount, allCheckIns, recentCheckIns] =
     await Promise.all([
       db.memberSubscription.findFirst({
-        where: { tenantUserId: tenantUser.id, status: "ACTIVE" },
+        where: {
+          tenantUserId: tenantUser.id,
+          status: { in: ["ACTIVE", "PAST_DUE"] },
+        },
         orderBy: { createdAt: "desc" },
         select: {
           status: true,
           billingEndsAt: true,
           plan: { select: { name: true } },
+          invoices: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              status: true,
+              amountCents: true,
+              currency: true,
+              dueAt: true,
+            },
+          },
         },
       }),
       db.checkIn.count({
@@ -163,6 +182,7 @@ export async function getMemberDashboardData(
   const streak = computeStreaks(allCheckIns);
   const monthlyAttendance = aggregateMonthly(allCheckIns);
 
+  const lastInvoice = subscription?.invoices[0] ?? null;
   const subData = subscription
     ? {
         planName: subscription.plan.name,
@@ -174,6 +194,14 @@ export async function getMemberDashboardData(
             (subscription.billingEndsAt.getTime() - now.getTime()) / 86400000
           )
         ),
+        invoice: lastInvoice
+          ? {
+              status: lastInvoice.status,
+              amountCents: lastInvoice.amountCents,
+              currency: lastInvoice.currency,
+              dueAt: lastInvoice.dueAt?.toISOString() ?? null,
+            }
+          : null,
       }
     : null;
 
