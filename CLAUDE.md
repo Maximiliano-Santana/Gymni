@@ -32,10 +32,11 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 
 ### Route Protection (Middleware)
 
-`src/middleware.ts` enforces three layers of protection:
+`src/middleware.ts` enforces four layers of protection:
 - **`isProtected`** — `/dashboard`, `/admin`, `/app`, `/api/protected` require authentication (redirects to `/login`).
 - **`isTenantOnly`** — `/dashboard`, `/admin` are blocked on the root domain (redirects to `/app`).
 - **`isPlatformOnly`** — `/app` is blocked on tenant subdomains (redirects to `/dashboard`).
+- **Subdomain root** — `/` on a tenant subdomain redirects to `/dashboard` (logged in) or `/login` (not logged in). No marketing page on subdomains.
 
 ### Role-based Authorization
 
@@ -78,7 +79,7 @@ Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green)
 
 ### Auth (NextAuth v4, JWT strategy)
 
-Config at `src/app/api/auth/[...nextauth]/route.ts`. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`.
+Config at `src/app/api/auth/[...nextauth]/route.ts`. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
 
 **Google OAuth** is configured with automatic account linking. The `signIn` callback:
 1. Links Google accounts to existing users with the same email.
@@ -104,10 +105,30 @@ Config at `src/app/api/auth/[...nextauth]/route.ts`. On login, the JWT callback 
 - `MembershipPlan` — what the gym sells (Básico, Premium). Unique per `[tenantId, code]`.
 - `MembershipPrice` — pricing per interval. Uses `intervalCount` for quarterly support (1=monthly, 3=quarterly, 12=annual).
 - `MemberSubscription` — links a member to a plan+price. Status: `ACTIVE | PAST_DUE | CANCELED`.
-- `MemberInvoice` — what the member owes per period. Stores `planId`/`priceId` snapshots for audit.
+- `MemberInvoice` — what the member owes per period. `dueAt` = real payment deadline (includes grace days). Stores `planId`/`priceId` snapshots for audit.
 - `MemberPayment` — how/when the member paid. Supports partial payments and multiple methods.
 
 Optional fields `providerPriceId`, `providerProductId`, `providerSubId` are ready for Stripe integration.
+
+**Member billing lifecycle** (cron at `src/app/api/cron/billing/route.ts`):
+
+The cron runs `processMemberBilling()` which handles 3 cases in order:
+1. **Auto-renew**: ACTIVE sub past `billingEndsAt` + last invoice `paid` → extends `billingEndsAt` by price interval, creates new `open` invoice with `dueAt = old billingEndsAt + graceDays`.
+2. **PAST_DUE**: ACTIVE sub + last invoice `open` + `dueAt <= now` → marks subscription `PAST_DUE`.
+3. **Auto-cancel**: PAST_DUE sub + `dueAt + autoCancelDays <= now` → marks `CANCELED`, voids open invoice.
+
+**Billing settings** per tenant (`TenantSettings.billing`):
+- `graceDays` (default: 0) — days after period start before marking as PAST_DUE. Baked into `invoice.dueAt` at creation.
+- `autoCancelDays` (default: 0, 0 = never) — days in PAST_DUE before auto-canceling.
+- Configurable via Admin → Settings → "Facturación" section (OWNER only).
+
+**Payment reactivation**: When a PAST_DUE member pays fully, the subscription reactivates with `billingEndsAt` extended from the **previous** end date (not the payment date), so members don't benefit from paying late.
+
+**Check-in enforcement**: Check-in never blocks — the lookup API returns a `warning` field (`"Membresía con adeudo"`, `"Membresía vencida"`, etc.) and the CheckInScreen shows a red alert with a "Ver miembro" link for quick management. Staff decides whether to allow entry.
+
+**Member dashboard** shows billing status: "Al corriente" (paid) or "Pago pendiente: $X" with due date. Amounts reflect real balance (total - partial payments).
+
+**Invoice table** (admin member detail) includes a "Pendiente" column showing remaining balance after partial payments.
 
 ### Route Groups
 
@@ -156,11 +177,18 @@ PostgreSQL via Docker (`docker-compose.yml`). Prisma schema at `prisma/schema.pr
 
 Key roles: `SystemRole` (USER | SUPER_ADMIN) lives on the `User` model. `TenantRole` (OWNER | ADMIN | STAFF | MEMBER) lives on the `TenantUser` join model — a user can have multiple roles per tenant.
 
-Seed data (`prisma/seed.js`): 2 tenants (dev-gym, green-gym), 2 owners, 1 platform plan (Basic), 2 membership plans per gym (Básico + Premium) with 3 prices each (monthly/quarterly/annual), 5 sample members with subscriptions, invoices, and payments.
+Seed data (`prisma/seed.js`): 2 tenants (dev-gym, green-gym), 2 owners, 1 platform plan (Basic), 2 membership plans per gym (Básico + Premium) with 3 prices each (monthly/quarterly/annual), 5 sample members with billing test scenarios:
+- Carlos: ACTIVE + paid (healthy, cron skips)
+- María: ACTIVE + paid + expired (cron auto-renews)
+- Juan: ACTIVE + open invoice + expired (cron marks PAST_DUE)
+- Ana: PAST_DUE + old open invoice (cron auto-cancels)
+- Pedro: no subscription (check-in warning)
+
+Dev-gym has `billing: { graceDays: 3, autoCancelDays: 30 }` configured. All member passwords: `tashamaria123*d`.
 
 ## Known WIP / Incomplete Areas
 
 - `src/features/auth/server/index.ts` — `CreateUser()` is empty (unused — registration goes through the API route directly)
 - No email sending for invitations — the UI shows a copyable link instead
-- Member dashboard (`/dashboard`) — basic placeholder, no member-facing subscription/payment views yet
 - No password reset flow
+- No email notifications for PAST_DUE or upcoming due dates
