@@ -193,8 +193,8 @@ async function processMemberBilling(now: Date) {
               currency: sub.price.currency,
               status: "open",
               issuedAt: now,
-              // Payment due at start of new period (= old billingEndsAt = now)
-              dueAt: sub.billingEndsAt,
+              // dueAt = real deadline (start of period + grace days)
+              dueAt: addDays(sub.billingEndsAt, graceDays),
               planId: sub.price.planId,
               priceId: sub.price.id,
             },
@@ -205,11 +205,11 @@ async function processMemberBilling(now: Date) {
         continue;
       }
 
-      // Case B: Mark PAST_DUE — invoice dueAt + graceDays has passed
+      // Case B: Mark PAST_DUE — invoice dueAt has passed (grace already baked in)
       if (
         lastInvoice?.status === "open" &&
         lastInvoice.dueAt &&
-        addDays(lastInvoice.dueAt, graceDays) <= now
+        lastInvoice.dueAt <= now
       ) {
         await db.memberSubscription.update({
           where: { id: sub.id },
@@ -218,11 +218,11 @@ async function processMemberBilling(now: Date) {
         stats.pastDue += 1;
       }
     } else if (sub.status === "PAST_DUE") {
-      // Case C: Auto-cancel — invoice dueAt + graceDays + autoCancelDays has passed
+      // Case C: Auto-cancel — invoice dueAt + autoCancelDays has passed (grace already in dueAt)
       if (
         autoCancelDays > 0 &&
         lastInvoice?.dueAt &&
-        addDays(lastInvoice.dueAt, graceDays + autoCancelDays) <= now
+        addDays(lastInvoice.dueAt, autoCancelDays) <= now
       ) {
         const updates = [
           db.memberSubscription.update({

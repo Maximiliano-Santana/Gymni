@@ -147,6 +147,9 @@ export async function getMemberDashboardData(
               amountCents: true,
               currency: true,
               dueAt: true,
+              payments: {
+                select: { amountCents: true },
+              },
             },
           },
         },
@@ -183,6 +186,8 @@ export async function getMemberDashboardData(
   const monthlyAttendance = aggregateMonthly(allCheckIns);
 
   const lastInvoice = subscription?.invoices[0] ?? null;
+  const totalPaid = lastInvoice?.payments.reduce((sum, p) => sum + p.amountCents, 0) ?? 0;
+  const balanceCents = lastInvoice ? lastInvoice.amountCents - totalPaid : 0;
   const subData = subscription
     ? {
         planName: subscription.plan.name,
@@ -197,7 +202,7 @@ export async function getMemberDashboardData(
         invoice: lastInvoice
           ? {
               status: lastInvoice.status,
-              amountCents: lastInvoice.amountCents,
+              amountCents: balanceCents,
               currency: lastInvoice.currency,
               dueAt: lastInvoice.dueAt?.toISOString() ?? null,
             }

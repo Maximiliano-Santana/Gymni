@@ -358,7 +358,7 @@ async function main() {
   });
 
   // ── Juan: Básico — ACTIVE, invoice open, venció hace 5 días → cron marca PAST_DUE ──
-  // (con graceDays=3 default: dueAt hace 5 días + 3 grace = hace 2 días → ya pasó)
+  // dueAt ya incluye grace: hace 5 días + 3 grace = hace 2 días (ya pasó → PAST_DUE)
   const sub3 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
@@ -377,14 +377,14 @@ async function main() {
       currency: "MXN",
       status: "open",
       issuedAt: addDays(now, -35),
-      dueAt: fiveDaysAgo,
+      dueAt: addDays(fiveDaysAgo, 3), // inicio + graceDays = hace 2 días
       planId: basicPlan.id,
       priceId: basicMonthly.id,
     },
   });
 
-  // ── Ana: Premium — PAST_DUE, invoice open de hace 40 días → cron auto-cancela ──
-  // (con autoCancelDays=30 y graceDays=3: dueAt hace 40 + 3 + 30 = 33 necesarios, 40 > 33 → cancela)
+  // ── Ana: Premium — PAST_DUE, invoice open vieja → cron auto-cancela ──
+  // dueAt ya incluye grace: hace 40 días + 3 = hace 37 días. autoCancelDays=30 → 37 > 30 → cancela
   const sub4 = await db.memberSubscription.create({
     data: {
       tenantId: devGym.id,
@@ -403,7 +403,7 @@ async function main() {
       currency: "MXN",
       status: "open",
       issuedAt: twoMonthsAgo,
-      dueAt: fortyDaysAgo,
+      dueAt: addDays(fortyDaysAgo, 3), // inicio + graceDays = hace 37 días
       planId: premiumPlan.id,
       priceId: premiumMonthly.id,
     },
