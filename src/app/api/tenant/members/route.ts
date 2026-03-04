@@ -68,10 +68,11 @@ export async function POST(request: Request) {
 
     // Find or create user
     let user = await db.user.findUnique({ where: { email } });
+    let tempPassword: string | null = null;
     if (!user) {
-      const tempPassword = await bcrypt.hash(crypto.randomUUID(), 10);
+      tempPassword = `Gym-${crypto.randomUUID().slice(0, 8)}`;
       user = await db.user.create({
-        data: { email, name, password: tempPassword },
+        data: { email, name, password: await bcrypt.hash(tempPassword, 10) },
       });
     }
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
         });
       }
       return NextResponse.json(
-        { message: "El usuario ya está registrado en este gym", data: { tenantUserId: existing.id } },
+        { message: "El usuario ya está registrado en este gym", data: { tenantUserId: existing.id, tempPassword } },
         { status: 200 }
       );
     }
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: "Miembro agregado correctamente", data: { tenantUserId: tenantUser.id } },
+      { message: "Miembro agregado correctamente", data: { tenantUserId: tenantUser.id, tempPassword } },
       { status: 201 }
     );
   } catch (error: unknown) {

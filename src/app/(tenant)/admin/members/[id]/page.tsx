@@ -22,7 +22,7 @@ export default async function MemberDetailPage({
   const tu = await db.tenantUser.findFirst({
     where: { id, tenantId, roles: { has: "MEMBER" } },
     include: {
-      user: { select: { id: true, name: true, email: true, createdAt: true } },
+      user: { select: { id: true, name: true, email: true, image: true, createdAt: true } },
       memberSubscriptions: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -34,6 +34,10 @@ export default async function MemberDetailPage({
             include: { payments: { orderBy: { paidAt: "desc" } } },
           },
         },
+      },
+      checkIns: {
+        orderBy: { checkedInAt: "desc" },
+        take: 50,
       },
     },
   });
@@ -57,8 +61,10 @@ export default async function MemberDetailPage({
     userId: tu.userId,
     name: tu.user.name,
     email: tu.user.email,
+    image: tu.user.image,
     roles: tu.roles as string[],
     status: tu.status,
+    qrToken: tu.qrToken,
     joinedAt: tu.user.createdAt.toISOString(),
     subscription: activeSub
       ? {
@@ -81,6 +87,11 @@ export default async function MemberDetailPage({
       method: p.method,
       paidAt: p.paidAt.toISOString(),
       reference: p.reference,
+    })),
+    checkIns: tu.checkIns.map((c) => ({
+      id: c.id,
+      checkedInAt: c.checkedInAt.toISOString(),
+      checkedInBy: c.checkedInBy,
     })),
   };
 

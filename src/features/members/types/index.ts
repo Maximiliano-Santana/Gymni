@@ -25,6 +25,8 @@ export type MemberListItem = {
 /** Shape returned by GET /api/tenant/members/[id] */
 export type MemberDetail = MemberListItem & {
   joinedAt: string;
+  image: string | null;
+  qrToken: string | null;
   invoices: {
     id: string;
     amountCents: number;
@@ -38,5 +40,10 @@ export type MemberDetail = MemberListItem & {
     method: string;
     paidAt: string;
     reference: string | null;
+  }[];
+  checkIns: {
+    id: string;
+    checkedInAt: string;
+    checkedInBy: string | null;
   }[];
 };

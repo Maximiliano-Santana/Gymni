@@ -9,6 +9,7 @@ import {
   CreditCard,
   Receipt,
   Settings,
+  ScanLine,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,7 @@ const NAV_ITEMS: {
   icon: typeof LayoutDashboard;
 }[] = [
   { page: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { page: "checkin", label: "Check-in", href: "/admin/checkin", icon: ScanLine },
   { page: "members", label: "Miembros", href: "/admin/members", icon: Users },
   { page: "payments", label: "Pagos", href: "/admin/payments", icon: Receipt },
   { page: "staff", label: "Staff", href: "/admin/staff", icon: UserCog },

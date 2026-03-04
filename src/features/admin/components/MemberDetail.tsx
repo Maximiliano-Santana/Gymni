@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -30,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Camera, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type PlanOption = {
@@ -50,9 +52,11 @@ type MemberData = {
   userId: string;
   name: string | null;
   email: string;
+  image: string | null;
   roles: string[];
   status: string;
   joinedAt: string;
+  qrToken: string | null;
   subscription: {
     id: string;
     planName: string;
@@ -72,6 +76,11 @@ type MemberData = {
     method: string;
     paidAt: string;
     reference: string | null;
+  }[];
+  checkIns: {
+    id: string;
+    checkedInAt: string;
+    checkedInBy: string | null;
   }[];
 };
 
@@ -96,7 +105,79 @@ export default function MemberDetail({
   userRoles: string[];
 }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const canManageSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN");
+
+  // Photo state
+  const [uploading, setUploading] = useState(false);
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
+
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxSize = 400;
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
+        } else {
+          if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.8);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      const form = new FormData();
+      form.append("photo", compressed, "photo.jpg");
+      const res = await fetch(`/api/tenant/members/${member.id}/photo`, {
+        method: "POST",
+        body: form,
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeletePhoto() {
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/tenant/members/${member.id}/photo`, {
+        method: "DELETE",
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRegenerateQr() {
+    setRegeneratingQr(true);
+    try {
+      const res = await fetch(`/api/tenant/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerateQr: true }),
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setRegeneratingQr(false);
+    }
+  }
 
   // Assign plan dialog state
   const [assignOpen, setAssignOpen] = useState(false);
@@ -186,14 +267,56 @@ export default function MemberDetail({
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold">{member.name ?? member.email}</h1>
-        <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>
-          {member.status === "ACTIVE" ? "Activo" : "Inactivo"}
-        </Badge>
+        <div className="relative group">
+          <Avatar className="size-16">
+            <AvatarImage src={member.image ?? undefined} alt={member.name ?? ""} />
+            <AvatarFallback className="text-lg">
+              {(member.name ?? member.email).charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
+          <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="size-7 rounded-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Camera className="size-3.5" />
+            </Button>
+            {member.image && (
+              <Button
+                variant="destructive"
+                size="icon"
+                className="size-7 rounded-full"
+                onClick={handleDeletePhoto}
+                disabled={uploading}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{member.name ?? member.email}</h1>
+            <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>
+              {member.status === "ACTIVE" ? "Activo" : "Inactivo"}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">{member.email}</p>
+        </div>
       </div>
 
-      {/* Info + Subscription Cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Info + Subscription + QR Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Información</CardTitle>
@@ -282,13 +405,40 @@ export default function MemberDetail({
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">QR de acceso</CardTitle>
+            {canManageSub && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleRegenerateQr}
+                disabled={regeneratingQr}
+              >
+                <RefreshCw className={`size-3.5 mr-1 ${regeneratingQr ? "animate-spin" : ""}`} />
+                Regenerar
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {member.qrToken ? (
+              <div className="rounded-lg bg-white p-2">
+                <QRCodeSVG value={member.qrToken} size={120} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-4">Sin QR asignado</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tabs: Invoices + Payments */}
+      {/* Tabs: Invoices + Payments + Check-ins */}
       <Tabs defaultValue="invoices">
         <TabsList>
           <TabsTrigger value="invoices">Facturas</TabsTrigger>
           <TabsTrigger value="payments">Pagos</TabsTrigger>
+          <TabsTrigger value="checkins">Check-ins</TabsTrigger>
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-3">
@@ -398,6 +548,35 @@ export default function MemberDetail({
                       <TableCell>{formatMoney(p.amountCents)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell>{p.reference ?? "—"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="checkins">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Hora</TableHead>
+                  <TableHead>Registrado por</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {member.checkIns.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-6">Sin check-ins</TableCell>
+                  </TableRow>
+                ) : (
+                  member.checkIns.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{new Date(c.checkedInAt).toLocaleDateString("es-MX")}</TableCell>
+                      <TableCell>{new Date(c.checkedInAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</TableCell>
+                      <TableCell>{c.checkedInBy ?? "—"}</TableCell>
                     </TableRow>
                   ))
                 )}

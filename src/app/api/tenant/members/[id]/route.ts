@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../../lib/validation";
 import { z } from "zod";
+import { generateQrToken } from "@/features/checkin/lib/qr-token";
 
 export async function GET(
   _request: NextRequest,
@@ -14,7 +15,7 @@ export async function GET(
     const tu = await db.tenantUser.findFirst({
       where: { id, tenantId, roles: { has: "MEMBER" } },
       include: {
-        user: { select: { id: true, name: true, email: true, createdAt: true } },
+        user: { select: { id: true, name: true, email: true, image: true, createdAt: true } },
         memberSubscriptions: {
           orderBy: { createdAt: "desc" },
           include: {
@@ -27,6 +28,10 @@ export async function GET(
               },
             },
           },
+        },
+        checkIns: {
+          orderBy: { checkedInAt: "desc" },
+          take: 50,
         },
       },
     });
@@ -44,8 +49,10 @@ export async function GET(
       userId: tu.userId,
       name: tu.user.name,
       email: tu.user.email,
+      image: tu.user.image,
       roles: tu.roles,
       status: tu.status,
+      qrToken: tu.qrToken,
       joinedAt: tu.user.createdAt.toISOString(),
       subscription: activeSub
         ? {
@@ -69,6 +76,11 @@ export async function GET(
         paidAt: p.paidAt.toISOString(),
         reference: p.reference,
       })),
+      checkIns: tu.checkIns.map((c) => ({
+        id: c.id,
+        checkedInAt: c.checkedInAt.toISOString(),
+        checkedInBy: c.checkedInBy,
+      })),
     };
 
     return NextResponse.json({ data });
@@ -82,6 +94,7 @@ export async function GET(
 
 const PatchSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+  regenerateQr: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -106,9 +119,13 @@ export async function PATCH(
       return NextResponse.json({ message: "Miembro no encontrado" }, { status: 404 });
     }
 
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.status) updateData.status = parsed.data.status;
+    if (parsed.data.regenerateQr) updateData.qrToken = generateQrToken();
+
     const updated = await db.tenantUser.update({
       where: { id },
-      data: { ...(parsed.data.status ? { status: parsed.data.status } : {}) },
+      data: updateData,
       include: { user: { select: { id: true, name: true, email: true } } },
     });
 

@@ -3,6 +3,7 @@ import type { TenantRole } from "@prisma/client";
 export const ADMIN_PAGES = {
   dashboard: ["OWNER", "ADMIN", "STAFF"] as TenantRole[],
   members: ["OWNER", "ADMIN", "STAFF"] as TenantRole[],
+  checkin: ["OWNER", "ADMIN", "STAFF"] as TenantRole[],
   payments: ["OWNER", "ADMIN"] as TenantRole[],
   staff: ["OWNER", "ADMIN"] as TenantRole[],
   plans: ["OWNER"] as TenantRole[],

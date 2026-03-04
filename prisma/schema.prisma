@@ -52,6 +52,8 @@ model Tenant {
   memberSubscriptions MemberSubscription[]
   memberInvoices      MemberInvoice[]
   memberPayments      MemberPayment[]
+  // Check-ins
+  checkIns            CheckIn[]
 
   @@map("tenants")
 }
@@ -112,7 +114,7 @@ model VerificationToken {
 
 model TenantUser {
   id String @id @default(cuid())
-  
+
   userId String
   user User @relation(fields: [userId], references: [id])
 
@@ -121,7 +123,9 @@ model TenantUser {
 
   roles TenantRole[] @default([])
   status TenantUserStatus @default(ACTIVE)
+  qrToken String? @unique
   memberSubscriptions MemberSubscription[]
+  checkIns CheckIn[]
 
   @@unique([userId, tenantId])
 }
@@ -370,4 +374,22 @@ model MemberPayment {
   @@map("member_payments")
   @@index([tenantId, paidAt])
   @@unique([invoiceId, reference])
+}
+
+// ===============================
+// Check-ins
+// ===============================
+
+model CheckIn {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  tenantUserId String
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id])
+  checkedInAt  DateTime @default(now())
+  checkedInBy  String?  // userId of staff who confirmed
+
+  @@map("check_ins")
+  @@index([tenantId, checkedInAt])
+  @@index([tenantUserId, checkedInAt])
 }

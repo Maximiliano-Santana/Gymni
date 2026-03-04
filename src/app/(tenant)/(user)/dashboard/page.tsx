@@ -14,6 +14,7 @@ import {
   CaloriesChart,
   MembershipPieChart,
 } from "./_components/charts";
+import MemberQrCode from "./_components/MemberQrCode";
 
 // ── Mocked data ───────────────────────────────────────────────────────────────
 
@@ -273,6 +274,8 @@ export default function MemberDashboard() {
                 <Button variant="outline" size="sm" className="w-full">Editar metas</Button>
               </CardFooter>
             </Card>
+
+            <MemberQrCode />
 
             <h2 className="text-base font-semibold text-foreground">Acciones rápidas</h2>
             <div className="grid grid-cols-2 gap-2">
