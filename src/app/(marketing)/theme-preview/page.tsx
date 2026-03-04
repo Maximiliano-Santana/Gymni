@@ -13,10 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   AttendanceChart,
-  ActivityChart,
-  CaloriesChart,
-  MembershipPieChart,
 } from "../../(tenant)/(user)/dashboard/_components/charts";
+
+const MOCK_ATTENDANCE = [
+  { mes: "Sep", asistencias: 14 },
+  { mes: "Oct", asistencias: 19 },
+  { mes: "Nov", asistencias: 11 },
+  { mes: "Dic", asistencias: 8 },
+  { mes: "Ene", asistencias: 22 },
+  { mes: "Feb", asistencias: 18 },
+];
 
 // ── Tenant options ───────────────────────────────────────────────────────────
 
@@ -214,51 +220,16 @@ export default function ThemePreviewPage() {
           ))}
         </div>
 
-        {/* Charts row 1 */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Asistencias mensuales</CardTitle>
-              <CardDescription>Últimos 6 meses vs meta</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceChart />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Mis membresías</CardTitle>
-              <CardDescription>Distribución por plan en el gym</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MembershipPieChart />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts row 2 */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Actividades por tipo</CardTitle>
-              <CardDescription>Sesiones completadas este mes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivityChart />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Calorías semanales</CardTitle>
-              <CardDescription>Últimas 8 semanas vs objetivo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CaloriesChart />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Attendance chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Asistencias mensuales</CardTitle>
+            <CardDescription>Últimos 6 meses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AttendanceChart data={MOCK_ATTENDANCE} />
+          </CardContent>
+        </Card>
 
         {/* Main grid */}
         <div className="grid gap-6 lg:grid-cols-3">

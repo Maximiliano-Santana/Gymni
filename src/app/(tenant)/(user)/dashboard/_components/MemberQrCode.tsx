@@ -5,9 +5,12 @@ import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrCode } from "lucide-react";
 
-export default function MemberQrCode() {
+const SIZE_MAP = { sm: 200, lg: 280 } as const;
+
+export default function MemberQrCode({ size = "sm" }: { size?: "sm" | "lg" }) {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const px = SIZE_MAP[size];
 
   useEffect(() => {
     fetch("/api/tenant/me/qr")
@@ -16,6 +19,25 @@ export default function MemberQrCode() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const qrContent = loading ? (
+    <div
+      className="animate-pulse rounded-lg bg-muted"
+      style={{ height: px, width: px }}
+    />
+  ) : qrToken ? (
+    <div className="rounded-lg bg-white p-3">
+      <QRCodeSVG value={qrToken} size={px} />
+    </div>
+  ) : (
+    <p className="text-sm text-muted-foreground py-8">
+      No se pudo generar el QR
+    </p>
+  );
+
+  if (size === "lg") {
+    return <div className="flex flex-col items-center gap-3">{qrContent}</div>;
+  }
 
   return (
     <Card className="sm:min-w-72">
@@ -26,20 +48,10 @@ export default function MemberQrCode() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-3">
-        {loading ? (
-          <div className="h-[200px] w-[200px] animate-pulse rounded-lg bg-muted" />
-        ) : qrToken ? (
-          <>
-            <div className="rounded-lg bg-white p-3">
-              <QRCodeSVG value={qrToken} size={200} />
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Muestra este código en la recepción
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground py-8">
-            No se pudo generar el QR
+        {qrContent}
+        {!loading && qrToken && (
+          <p className="text-xs text-muted-foreground text-center">
+            Muestra este código en la recepción
           </p>
         )}
       </CardContent>

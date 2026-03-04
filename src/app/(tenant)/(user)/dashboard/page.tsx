@@ -1,326 +1,240 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  AttendanceChart,
-  ActivityChart,
-  CaloriesChart,
-  MembershipPieChart,
-} from "./_components/charts";
+import { getMemberDashboardData } from "@/features/members/server/dashboard";
+import { AttendanceChart } from "./_components/charts";
 import MemberQrCode from "./_components/MemberQrCode";
 
-// ── Mocked data ───────────────────────────────────────────────────────────────
-
-const MEMBER = {
-  name: "Tasha María",
-  plan: "Premium",
-  status: "active" as const,
-  memberSince: "Enero 2024",
-  expiresAt: "28 Mar 2026",
-  daysLeft: 28,
-};
-
-const STATS = [
-  { label: "Asistencias este mes", value: "18", sub: "+3 vs mes anterior", trend: "up" },
-  { label: "Clases reservadas",    value: "6",  sub: "2 esta semana",      trend: "up" },
-  { label: "Racha actual",         value: "12d", sub: "Récord: 21 días",   trend: "neutral" },
-  { label: "Calorías quemadas",    value: "9,240", sub: "kcal estimadas",  trend: "up" },
-];
-
-const UPCOMING_CLASSES = [
-  { name: "Spinning Intensivo", trainer: "Carlos M.", time: "Hoy, 7:00 PM",   spots: 3, total: 20 },
-  { name: "Yoga Flow",          trainer: "Ana R.",    time: "Mañana, 8:00 AM", spots: 8, total: 15 },
-  { name: "CrossFit WOD",       trainer: "Luis T.",   time: "Mié, 6:30 AM",   spots: 1, total: 12 },
-  { name: "Pilates Core",       trainer: "Sofía G.",  time: "Jue, 9:00 AM",   spots: 5, total: 10 },
-];
-
-const RECENT_ACTIVITY = [
-  { activity: "CrossFit WOD", date: "Hoy",    duration: "55 min", calories: 620 },
-  { activity: "Spinning",     date: "Ayer",   duration: "45 min", calories: 480 },
-  { activity: "Yoga Flow",    date: "Lun 24", duration: "60 min", calories: 210 },
-  { activity: "Pilates",      date: "Sáb 22", duration: "50 min", calories: 290 },
-  { activity: "CrossFit WOD", date: "Vie 21", duration: "55 min", calories: 590 },
-];
-
-const GOALS = [
-  { label: "Asistencias mensuales", current: 18, target: 24, unit: "días" },
-  { label: "Cardio semanal",        current: 3,  target: 4,  unit: "sesiones" },
-  { label: "Clases grupales",       current: 6,  target: 8,  unit: "clases" },
-];
-
-const QUICK_ACTIONS = [
-  { label: "Reservar clase",  variant: "default"   as const },
-  { label: "Ver horarios",    variant: "outline"   as const },
-  { label: "Mi progreso",     variant: "outline"   as const },
-  { label: "Nutrición",       variant: "secondary" as const },
-];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: "active" | "expiring" | "expired" }) {
-  const map = {
-    active:   { label: "Activa",      className: "bg-success/15 text-success border-success/30" },
-    expiring: { label: "Por vencer",  className: "bg-warning/15 text-warning border-warning/30" },
-    expired:  { label: "Vencida",     className: "bg-destructive/15 text-destructive border-destructive/30" },
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    ACTIVE: {
+      label: "Activa",
+      className: "bg-primary/10 text-primary border-primary/30",
+    },
+    PAST_DUE: {
+      label: "Por vencer",
+      className: "bg-destructive/10 text-destructive border-destructive/30",
+    },
+    CANCELED: {
+      label: "Cancelada",
+      className: "bg-muted text-muted-foreground border-border",
+    },
   };
-  const { label, className } = map[status];
+  const { label, className } = map[status] ?? map.CANCELED;
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${className}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${className}`}
+    >
       {label}
     </span>
   );
 }
 
-function TrendIcon({ trend }: { trend: string }) {
-  if (trend === "up")   return <span className="text-success text-xs font-medium">↑</span>;
-  if (trend === "down") return <span className="text-destructive text-xs font-medium">↓</span>;
-  return <span className="text-muted-foreground text-xs">→</span>;
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function ProgressBar({ current, target }: { current: number; target: number }) {
-  const pct = Math.min(Math.round((current / target) * 100), 100);
-  return (
-    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-    </div>
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default async function MemberDashboard() {
+  const [session, h] = await Promise.all([
+    getServerSession(authOptions),
+    headers(),
+  ]);
+
+  if (!session) redirect("/login");
+
+  const sub = h.get("x-tenant-subdomain");
+  if (!sub) redirect("/app");
+
+  const tenantInfo = session.user.tenants?.[sub];
+  if (!tenantInfo) redirect("/login");
+
+  const data = await getMemberDashboardData(
+    session.user.id,
+    tenantInfo.tenantId
   );
-}
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+  if (!data) redirect("/login");
 
-export default function MemberDashboard() {
+  const firstName = data.member.name?.split(" ")[0] ?? "Miembro";
+  const diff = data.attendance.thisMonth - data.attendance.lastMonth;
+  const diffLabel =
+    diff > 0
+      ? `+${diff} vs mes anterior`
+      : diff < 0
+        ? `${diff} vs mes anterior`
+        : "Igual que mes anterior";
+
   return (
-    <div className="min-h-screen bg-background">
-
-      {/* Top nav */}
-      <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-            TM
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground leading-none">{MEMBER.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{MEMBER.plan} · {MEMBER.memberSince}</p>
-          </div>
+    <div className="mx-auto max-w-6xl px-6 py-8 space-y-8">
+      {/* Welcome + membership card */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Bienvenido, {firstName}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {data.streak.current > 0
+              ? `Llevas una racha de ${data.streak.current} día${data.streak.current !== 1 ? "s" : ""}. ¡Sigue así!`
+              : "¡Hoy es un buen día para entrenar!"}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">Horarios</Button>
-          <Button variant="ghost" size="sm">Mi perfil</Button>
-          <Button size="sm">Reservar clase</Button>
-        </div>
-      </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8 space-y-8">
-
-        {/* Welcome + membership banner */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Bienvenida, {MEMBER.name.split(" ")[0]} 👋
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Viernes 28 de febrero, 2026 · Llevas una racha de 12 días. ¡Sigue así!
-            </p>
-          </div>
+        {data.subscription ? (
           <Card className="sm:min-w-72 py-4">
             <CardContent className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Membresía</p>
-                <p className="text-lg font-bold text-foreground mt-0.5">{MEMBER.plan}</p>
-                <p className="text-xs text-muted-foreground">Vence {MEMBER.expiresAt}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                  Membresía
+                </p>
+                <p className="text-lg font-bold text-foreground mt-0.5">
+                  {data.subscription.planName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Vence {formatDate(data.subscription.billingEndsAt)}
+                </p>
               </div>
               <div className="text-right">
-                <StatusBadge status={MEMBER.status} />
-                <p className="text-2xl font-black text-primary mt-2">{MEMBER.daysLeft}</p>
+                <StatusBadge status={data.subscription.status} />
+                <p className="text-2xl font-black text-primary mt-2">
+                  {data.subscription.daysLeft}
+                </p>
                 <p className="text-xs text-muted-foreground">días restantes</p>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {STATS.map((stat) => (
-            <Card key={stat.label}>
-              <CardHeader>
-                <CardDescription>{stat.label}</CardDescription>
-                <CardTitle className="text-3xl font-black">{stat.value}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <TrendIcon trend={stat.trend} />
-                  {stat.sub}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Charts row 1: Asistencias + Distribución */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Asistencias mensuales</CardTitle>
-              <CardDescription>Últimos 6 meses vs meta</CardDescription>
-            </CardHeader>
+        ) : (
+          <Card className="sm:min-w-72 py-4">
             <CardContent>
-              <AttendanceChart />
+              <p className="text-sm text-muted-foreground">
+                Sin membresía activa
+              </p>
             </CardContent>
           </Card>
+        )}
+      </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardDescription>Asistencias este mes</CardDescription>
+            <CardTitle className="text-3xl font-black">
+              {data.attendance.thisMonth}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              {diff > 0 && (
+                <span className="text-primary text-xs font-medium">↑</span>
+              )}
+              {diff < 0 && (
+                <span className="text-destructive text-xs font-medium">↓</span>
+              )}
+              {diff === 0 && (
+                <span className="text-muted-foreground text-xs">→</span>
+              )}
+              {diffLabel}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>Racha actual</CardDescription>
+            <CardTitle className="text-3xl font-black">
+              {data.streak.current}d
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              Récord: {data.streak.record} días
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Attendance chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Asistencias mensuales</CardTitle>
+          <CardDescription>Últimos 6 meses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AttendanceChart data={data.monthlyAttendance} />
+        </CardContent>
+      </Card>
+
+      {/* Recent check-ins + QR */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-base font-semibold text-foreground">
+            Check-ins recientes
+          </h2>
           <Card>
-            <CardHeader>
-              <CardTitle>Mis membresías</CardTitle>
-              <CardDescription>Distribución por plan en el gym</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MembershipPieChart />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts row 2: Actividades + Calorías */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Actividades por tipo</CardTitle>
-              <CardDescription>Sesiones completadas este mes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivityChart />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Calorías semanales</CardTitle>
-              <CardDescription>Últimas 8 semanas vs objetivo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CaloriesChart />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main grid: Upcoming + Goals/Actions */}
-        <div className="grid gap-6 lg:grid-cols-3">
-
-          {/* Upcoming classes */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-foreground">Próximas clases</h2>
-              <Button variant="ghost" size="sm" className="text-xs">Ver todas →</Button>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                {UPCOMING_CLASSES.map((cls, i) => (
-                  <div key={cls.name}>
-                    <div className="flex items-center justify-between px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary font-bold text-sm">{cls.name.charAt(0)}</span>
+            {data.recentCheckIns.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 px-6 py-3 border-b bg-muted/40 rounded-t-xl">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Fecha
+                  </p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">
+                    Hora
+                  </p>
+                </div>
+                <CardContent className="p-0">
+                  {data.recentCheckIns.map((ci, i) => (
+                    <div key={ci.id}>
+                      <div className="grid grid-cols-2 items-center px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                          <p className="text-sm text-foreground">
+                            {formatDate(ci.checkedInAt)}
+                          </p>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{cls.name}</p>
-                          <p className="text-xs text-muted-foreground">{cls.trainer} · {cls.time}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                          <p className="text-xs text-muted-foreground">{cls.spots} lugares</p>
-                          <p className="text-xs text-muted-foreground">de {cls.total}</p>
-                        </div>
-                        <Button size="sm" variant={cls.spots <= 2 ? "default" : "outline"}>
-                          {cls.spots <= 2 ? "¡Último!" : "Reservar"}
-                        </Button>
-                      </div>
-                    </div>
-                    {i < UPCOMING_CLASSES.length - 1 && <Separator />}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Goals + quick actions */}
-          <div className="space-y-4">
-            <h2 className="text-base font-semibold text-foreground">Mis metas</h2>
-            <Card>
-              <CardContent className="space-y-5 pt-2">
-                {GOALS.map((goal) => {
-                  const pct = Math.round((goal.current / goal.target) * 100);
-                  return (
-                    <div key={goal.label} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-foreground">{goal.label}</p>
-                        <p className="text-xs font-medium text-primary">
-                          {goal.current}/{goal.target} {goal.unit}
+                        <p className="text-sm text-muted-foreground text-right">
+                          {formatTime(ci.checkedInAt)}
                         </p>
                       </div>
-                      <ProgressBar current={goal.current} target={goal.target} />
-                      <p className="text-xs text-muted-foreground text-right">{pct}%</p>
+                      {i < data.recentCheckIns.length - 1 && <Separator />}
                     </div>
-                  );
-                })}
+                  ))}
+                </CardContent>
+              </>
+            ) : (
+              <CardContent className="py-8">
+                <p className="text-sm text-muted-foreground text-center">
+                  Aún no tienes check-ins registrados
+                </p>
               </CardContent>
-              <CardFooter className="border-t pt-4">
-                <Button variant="outline" size="sm" className="w-full">Editar metas</Button>
-              </CardFooter>
-            </Card>
-
-            <MemberQrCode />
-
-            <h2 className="text-base font-semibold text-foreground">Acciones rápidas</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {QUICK_ACTIONS.map((action) => (
-                <Button key={action.label} variant={action.variant} size="sm" className="h-12 text-xs">
-                  {action.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Recent activity */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">Actividad reciente</h2>
-            <Button variant="ghost" size="sm" className="text-xs">Ver historial →</Button>
-          </div>
-          <Card>
-            <div className="grid grid-cols-4 px-6 py-3 border-b bg-muted/40 rounded-t-xl">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Actividad</p>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fecha</p>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duración</p>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Calorías</p>
-            </div>
-            <CardContent className="p-0">
-              {RECENT_ACTIVITY.map((item, i) => (
-                <div key={i}>
-                  <div className="grid grid-cols-4 items-center px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-success flex-shrink-0" />
-                      <p className="text-sm font-medium text-foreground">{item.activity}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{item.date}</p>
-                    <p className="text-sm text-muted-foreground">{item.duration}</p>
-                    <p className="text-sm font-medium text-foreground text-right">{item.calories} kcal</p>
-                  </div>
-                  {i < RECENT_ACTIVITY.length - 1 && <Separator />}
-                </div>
-              ))}
-            </CardContent>
+            )}
           </Card>
         </div>
 
-      </main>
+        <div className="space-y-4">
+          <h2 className="text-base font-semibold text-foreground">Mi QR</h2>
+          <MemberQrCode size="sm" />
+        </div>
+      </div>
     </div>
   );
 }
