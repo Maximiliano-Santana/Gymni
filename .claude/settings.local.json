@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(npx shadcn@latest:*)"
+      "Bash(npx shadcn@latest:*)",
+      "Bash(ngrok version:*)",
+      "Bash(npx ngrok:*)",
+      "Bash(curl:*)",
+      "Bash(ls \"C:\\\\Users\\\\maxee\\\\Dev\\\\freelance\\\\gym-manager\\\\gymni-app\\\\src\\\\app\\\\\\(tenant\\)\\\\\\(user\\)\\\\dashboard\")",
+      "Bash(npm run build)",
+      "Bash(npx prisma:*)",
+      "Bash(tasklist:*)",
+      "Bash(rm:*)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "WebFetch(domain:stripe.com)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

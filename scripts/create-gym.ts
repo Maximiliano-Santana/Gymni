@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import * as readline from "readline";
 
 const db = new PrismaClient();
+const BASE_DOMAIN = process.env.BASE_DOMAIN || "localhost:3000";
+const PROTOCOL = BASE_DOMAIN.startsWith("localhost") ? "http" : "https";
 
 function ask(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -79,7 +81,7 @@ async function main() {
     }
 
     console.log(`✅ ${ownerEmail} ya tenía cuenta — asignado como OWNER`);
-    console.log(`\n🔗 Ya puede entrar a: https://${subdomain}.gymni.app/admin`);
+    console.log(`\n🔗 Ya puede entrar a: ${PROTOCOL}://${subdomain}.${BASE_DOMAIN}/admin`);
   } else {
     // User doesn't exist — create invitation
     const invitation = await db.invitation.create({
@@ -93,7 +95,7 @@ async function main() {
 
     console.log(`✅ Invitación creada para ${ownerEmail}`);
     console.log(`\n🔗 Envía este link al owner:\n`);
-    console.log(`   https://${subdomain}.gymni.app/register?invitation=${invitation.id}`);
+    console.log(`   ${PROTOCOL}://${subdomain}.${BASE_DOMAIN}/register?invitation=${invitation.id}`);
   }
 
   console.log("");
