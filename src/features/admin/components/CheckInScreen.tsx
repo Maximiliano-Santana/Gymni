@@ -7,13 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AlertTriangle, CheckCircle2, XCircle, ScanLine } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle, ScanLine } from "lucide-react";
 import type { CheckInMemberInfo } from "@/features/checkin/types";
 
 type ScreenState =
   | { step: "scanning" }
   | { step: "preview"; member: CheckInMemberInfo }
   | { step: "confirmed"; name: string }
+  | { step: "already"; member: CheckInMemberInfo }
   | { step: "error"; message: string };
 
 export default function CheckInScreen() {
@@ -40,7 +41,7 @@ export default function CheckInScreen() {
         }
         const member = json.data as CheckInMemberInfo;
         if (member.lastCheckIn) {
-          setState({ step: "error", message: "Ya registró asistencia hoy" });
+          setState({ step: "already", member });
           return;
         }
         setState({ step: "preview", member });
@@ -104,7 +105,16 @@ export default function CheckInScreen() {
 
       {state.step === "preview" && (
         <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-8">
+          <CardContent className="relative flex flex-col items-center gap-4 py-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-2 top-2"
+              onClick={resetToScan}
+              disabled={loading}
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
             <Avatar className="size-24">
               <AvatarImage src={state.member.image ?? undefined} alt={state.member.name ?? ""} />
               <AvatarFallback className="text-2xl">
@@ -129,27 +139,17 @@ export default function CheckInScreen() {
               </p>
             )}
             {state.member.warning && (
-              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
-                  <p className="text-sm text-destructive font-medium">{state.member.warning}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10 flex-shrink-0"
-                  asChild
-                >
-                  <Link href={`/admin/members/${state.member.id}`}>Ver miembro</Link>
-                </Button>
+              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center gap-2">
+                <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
+                <p className="text-sm text-destructive font-medium">{state.member.warning}</p>
               </div>
             )}
             <div className="flex gap-3 w-full mt-2">
-              <Button variant="outline" className="flex-1" onClick={resetToScan} disabled={loading}>
-                Cancelar
+              <Button variant="outline" className="flex-1" asChild>
+                <Link href={`/admin/members/${state.member.id}`}>Ver miembro</Link>
               </Button>
               <Button className="flex-1" onClick={handleConfirm} disabled={loading}>
-                {loading ? "Registrando..." : "Confirmar check-in"}
+                {loading ? "Registrando..." : "Registrar check-in"}
               </Button>
             </div>
           </CardContent>
@@ -163,6 +163,32 @@ export default function CheckInScreen() {
             <h2 className="text-xl font-bold">Check-in exitoso</h2>
             <p className="text-muted-foreground">{state.name}</p>
             <p className="text-xs text-muted-foreground">Regresando al escáner...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {state.step === "already" && (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-8">
+            <Avatar className="size-24">
+              <AvatarImage src={state.member.image ?? undefined} alt={state.member.name ?? ""} />
+              <AvatarFallback className="text-2xl">
+                {(state.member.name ?? state.member.email).charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-bold">{state.member.name ?? state.member.email}</h2>
+              <p className="text-sm text-muted-foreground">{state.member.email}</p>
+            </div>
+            <Badge variant="secondary">Ya registró asistencia hoy</Badge>
+            <div className="flex gap-3 w-full mt-2">
+              <Button variant="outline" className="flex-1" onClick={resetToScan}>
+                Volver a escanear
+              </Button>
+              <Button className="flex-1" asChild>
+                <Link href={`/admin/members/${state.member.id}`}>Ver miembro</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
