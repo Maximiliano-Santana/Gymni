@@ -177,6 +177,26 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
+    async redirect({ url, baseUrl }) {
+      // Allow redirects to subdomains of the same base domain
+      const base = new URL(baseUrl);
+      try {
+        const target = new URL(url);
+        const baseParts = base.hostname.split(".");
+        const targetParts = target.hostname.split(".");
+        // Same host or subdomain of base (e.g. acme.localhost vs localhost)
+        const baseRoot = baseParts.slice(-2).join(".");
+        const targetRoot = targetParts.slice(-2).join(".");
+        if (baseRoot === targetRoot || target.hostname.endsWith(`.${base.hostname}`)) {
+          return url;
+        }
+      } catch {
+        // Relative URL — prepend baseUrl
+        if (url.startsWith("/")) return `${baseUrl}${url}`;
+      }
+      return baseUrl;
+    },
+
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = String(token.sub);

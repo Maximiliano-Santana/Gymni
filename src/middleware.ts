@@ -52,7 +52,13 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // 3) Auth SOLO si la ruta es protegida
+  // 3) Subdomain root → redirect to /login (no marketing page on tenant subdomains)
+  if (sub && pathname === "/") {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    return NextResponse.redirect(new URL(token ? "/dashboard" : "/login", req.url));
+  }
+
+  // 4) Auth SOLO si la ruta es protegida
   if (isProtected(pathname)) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {

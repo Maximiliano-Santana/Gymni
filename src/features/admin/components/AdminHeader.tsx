@@ -37,7 +37,7 @@ export default function AdminHeader() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+          <DropdownMenuItem onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}>
             <LogOut className="mr-2 size-4" />
             Cerrar sesión
           </DropdownMenuItem>
