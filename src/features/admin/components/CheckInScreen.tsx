@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -128,9 +129,19 @@ export default function CheckInScreen() {
               </p>
             )}
             {state.member.warning && (
-              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center gap-2">
-                <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
-                <p className="text-sm text-destructive font-medium">{state.member.warning}</p>
+              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
+                  <p className="text-sm text-destructive font-medium">{state.member.warning}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10 flex-shrink-0"
+                  asChild
+                >
+                  <Link href={`/admin/members/${state.member.id}`}>Ver miembro</Link>
+                </Button>
               </div>
             )}
             <div className="flex gap-3 w-full mt-2">
