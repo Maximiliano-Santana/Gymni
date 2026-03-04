@@ -66,6 +66,8 @@ type MemberData = {
   invoices: {
     id: string;
     amountCents: number;
+    paidCents: number;
+    balanceCents: number;
     currency: string;
     status: string;
     issuedAt: string;
@@ -459,7 +461,7 @@ export default function MemberDetail({
                       <SelectContent>
                         {openInvoices.map((inv) => (
                           <SelectItem key={inv.id} value={inv.id}>
-                            {formatMoney(inv.amountCents, inv.currency)} — {new Date(inv.issuedAt).toLocaleDateString("es-MX")}
+                            Pendiente: {formatMoney(inv.balanceCents, inv.currency)} — {new Date(inv.issuedAt).toLocaleDateString("es-MX")}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -499,19 +501,23 @@ export default function MemberDetail({
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Monto</TableHead>
+                  <TableHead>Pendiente</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {member.invoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-6">Sin facturas</TableCell>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-6">Sin facturas</TableCell>
                   </TableRow>
                 ) : (
                   member.invoices.map((inv) => (
                     <TableRow key={inv.id}>
                       <TableCell>{new Date(inv.issuedAt).toLocaleDateString("es-MX")}</TableCell>
                       <TableCell>{formatMoney(inv.amountCents, inv.currency)}</TableCell>
+                      <TableCell className={inv.balanceCents > 0 ? "text-destructive font-medium" : ""}>
+                        {inv.balanceCents > 0 ? formatMoney(inv.balanceCents, inv.currency) : "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={inv.status === "paid" ? "default" : inv.status === "open" ? "secondary" : "destructive"}>
                           {inv.status}

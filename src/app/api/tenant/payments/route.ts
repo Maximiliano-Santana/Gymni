@@ -57,12 +57,12 @@ export async function POST(request: Request) {
 
         // Reactivate subscription if it was PAST_DUE
         if (invoice.subscription.status === "PAST_DUE") {
-          // Extend billing period from now
+          // Extend billing period from previous billingEndsAt (not from today)
           const price = await tx.membershipPrice.findUnique({
             where: { id: invoice.priceId },
           });
           if (price) {
-            const newEnd = new Date();
+            const newEnd = new Date(invoice.subscription.billingEndsAt);
             if (price.interval === "YEAR") {
               newEnd.setFullYear(newEnd.getFullYear() + price.intervalCount);
             } else {

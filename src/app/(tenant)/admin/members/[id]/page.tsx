@@ -74,13 +74,18 @@ export default async function MemberDetailPage({
           billingEndsAt: activeSub.billingEndsAt.toISOString(),
         }
       : null,
-    invoices: allInvoices.map((inv) => ({
-      id: inv.id,
-      amountCents: inv.amountCents,
-      currency: inv.currency,
-      status: inv.status,
-      issuedAt: inv.issuedAt.toISOString(),
-    })),
+    invoices: allInvoices.map((inv) => {
+      const paidCents = inv.payments.reduce((sum, p) => sum + p.amountCents, 0);
+      return {
+        id: inv.id,
+        amountCents: inv.amountCents,
+        paidCents,
+        balanceCents: inv.amountCents - paidCents,
+        currency: inv.currency,
+        status: inv.status,
+        issuedAt: inv.issuedAt.toISOString(),
+      };
+    }),
     payments: allPayments.map((p) => ({
       id: p.id,
       amountCents: p.amountCents,
