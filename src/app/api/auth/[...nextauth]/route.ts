@@ -14,6 +14,7 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       name: "Credentials",
@@ -63,42 +64,17 @@ export const authOptions: NextAuthOptions = {
       const email = user.email;
       if (!email) return false;
 
-      // Account linking: if a user with this email already exists (e.g. from credentials),
-      // link the Google account to the existing user instead of creating a new one.
+      // allowDangerousEmailAccountLinking + PrismaAdapter handle account
+      // linking automatically — no manual db.account.create() needed.
+      // If an existing user has the same email, PrismaAdapter links the
+      // Google account and reuses that user record.
+
+      // Ensure user.id points to the existing DB user (needed for jwt callback)
       const existingUser = await db.user.findUnique({
         where: { email },
-        include: { accounts: true },
+        select: { id: true },
       });
-
       if (existingUser) {
-        // Check if this Google account is already linked
-        const alreadyLinked = existingUser.accounts.some(
-          (a) =>
-            a.provider === account.provider &&
-            a.providerAccountId === account.providerAccountId
-        );
-
-        if (!alreadyLinked) {
-          await db.account.create({
-            data: {
-              userId: existingUser.id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token ?? null,
-              access_token: account.access_token ?? null,
-              expires_at: account.expires_at ?? null,
-              token_type: account.token_type ?? null,
-              scope: account.scope ?? null,
-              id_token: account.id_token ?? null,
-              session_state: account.session_state
-                ? String(account.session_state)
-                : null,
-            },
-          });
-        }
-
-        // Mutate user.id so the jwt callback gets the correct existing user ID
         user.id = existingUser.id;
       }
 
