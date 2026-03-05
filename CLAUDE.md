@@ -36,7 +36,7 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 - **`isProtected`** — `/dashboard`, `/admin`, `/app`, `/api/protected` require authentication (redirects to `/login`).
 - **`isTenantOnly`** — `/dashboard`, `/admin` are blocked on the root domain (redirects to `/app`).
 - **`isPlatformOnly`** — `/app` is blocked on tenant subdomains (redirects to `/dashboard`).
-- **Subdomain root** — `/` on a tenant subdomain redirects to `/dashboard` (logged in) or `/login` (not logged in). No marketing page on subdomains.
+- **Subdomain root** — `/` on a tenant subdomain redirects based on role: staff (OWNER/ADMIN/STAFF) → `/admin`, members → `/dashboard`, unauthenticated → `/login`. No marketing page on subdomains.
 
 ### Role-based Authorization
 
@@ -60,7 +60,9 @@ Admin routes use **server component layouts** for role checks (no client-side fl
 
 ### Theming System
 
-Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with semantic tokens, gray scale, and chart colors (`src/features/tenants/server/theme.ts`). The endpoint also accepts `?tenant=<subdomain>` to force a specific tenant's theme. Caching uses ETag based on `tenant.id + updatedAt`.
+Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with semantic tokens, gray scale, and chart colors (`src/features/tenants/server/theme.ts`). The endpoint also accepts `?tenant=<subdomain>` to force a specific tenant's theme. Caching uses ETag with `must-revalidate` — changes apply immediately.
+
+**Live theme preview**: The settings form (`SettingsForm.tsx`) imports `generateTenantCSS()` on the client and injects a `<style>` tag on every change, so theme edits are visible instantly without saving. Color fields for success/warning include preset buttons.
 
 `globals.css` maps all CSS variables to Tailwind tokens via `@theme inline`, so Tailwind classes like `bg-primary` and `text-foreground` automatically reflect the tenant's theme.
 
@@ -70,7 +72,7 @@ Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/featur
 - The gray scale (`gray-100` to `gray-900`) and chart colors (`chart-1` to `chart-5`) are also available and derived from the tenant's settings.
 - Theme preview available at `/theme-preview` (public, no auth required).
 
-Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green). Default theme is light + orange.
+Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green). Default theme is dark + purple.
 
 ### Type Patterns
 
@@ -124,7 +126,7 @@ The cron runs `processMemberBilling()` which handles 3 cases in order:
 
 **Payment reactivation**: When a PAST_DUE member pays fully, the subscription reactivates with `billingEndsAt` extended from the **previous** end date (not the payment date), so members don't benefit from paying late.
 
-**Check-in enforcement**: Check-in never blocks — the lookup API returns a `warning` field (`"Membresía con adeudo"`, `"Membresía vencida"`, etc.) and the CheckInScreen shows a red alert with a "Ver miembro" link for quick management. Staff decides whether to allow entry.
+**Check-in enforcement**: Check-in never blocks — the lookup API returns a `warning` field (`"Membresía con adeudo"`, `"Membresía vencida"`, etc.) and the CheckInScreen shows a red alert with a "Ver miembro" link for quick management. Staff decides whether to allow entry. Check-in supports two modes: **QR scan** (`POST /api/tenant/checkin/lookup`) and **manual search by name/email** (`POST /api/tenant/checkin/search`). Both lead to the same preview → confirm flow.
 
 **Member dashboard** shows billing status: "Al corriente" (paid) or "Pago pendiente: $X" with due date. Amounts reflect real balance (total - partial payments).
 
@@ -142,7 +144,8 @@ src/app/
     (auth)/             # /login, /register
     (user)/             # Member-facing dashboard
     admin/              # Gym admin panel (sidebar layout)
-      members/          # Member list + [id] detail
+      checkin/            # QR scanner + manual search check-in
+      members/          # Member list + [id] detail (paginated, server-side search/filters)
       staff/            # Staff management
       plans/            # Membership plans
       settings/         # Gym configuration
@@ -150,8 +153,9 @@ src/app/
     auth/               # NextAuth + register + invitation
     tenants/            # CRUD, theme CSS, subscription, payment
     tenant/             # Tenant-scoped admin APIs
+      checkin/          # lookup (QR), search (name/email), confirm
       dashboard/        # Stats (members, revenue, expiring subs)
-      members/          # Member CRUD + [id] detail
+      members/          # Member CRUD + [id] detail (paginated, search, status filters)
       plans/            # Membership plan CRUD + [id]
       subscriptions/    # Assign/cancel member subscriptions
       payments/         # Register manual payments
@@ -168,8 +172,9 @@ Each feature owns its types, lib (client utils), server (server-only logic), com
 - `tenants/` — `TenantTyped`, `TenantSettings`, default settings, CSS generation, TenantContext provider, tenant resolution
 - `billing-platform/` — TypeScript types (subscription, payment DTOs) for Gymni→Tenant billing
 - `billing-members/` — Zod schemas and DTOs for Tenant→Member billing (plans, subscriptions, payments)
-- `members/` — Member list/detail types (`MemberListItem`, `MemberDetail`, `AddMemberSchema`)
-- `admin/` — Admin panel components (Sidebar, Header, MembersTable, MemberDetail, StaffTable, PlansView, SettingsForm) and permissions (`canAccess`, `ADMIN_PAGES`)
+- `members/` — Member list/detail types (`MemberListItem`, `MemberDetail`, `AddMemberSchema`, `PaginatedMembers`), shared query builder (`server/queries.ts`)
+- `checkin/` — Zod schemas (`CheckInLookupSchema`, `CheckInSearchSchema`, `CheckInConfirmSchema`) and `CheckInMemberInfo` type
+- `admin/` — Admin panel components (Sidebar, Header, MembersTable, MemberDetail, StaffTable, PlansView, SettingsForm, CheckInScreen) and permissions (`canAccess`, `ADMIN_PAGES`)
 
 ### Database
 
@@ -185,6 +190,35 @@ Seed data (`prisma/seed.js`): 2 tenants (dev-gym, green-gym), 2 owners, 1 platfo
 - Pedro: no subscription (check-in warning)
 
 Dev-gym has `billing: { graceDays: 3, autoCancelDays: 30 }` configured. All member passwords: `tashamaria123*d`.
+
+### Email Notifications (`src/emails/` + `src/lib/email.ts`)
+
+Uses **Resend** with React Email components. `sendEmail()` gracefully skips if `RESEND_API_KEY` is not set and ignores test email domains.
+
+**Templates**:
+- `WelcomeEmail` — sent when adding a member. Includes temp password + login URL + change password link for new users, or just a welcome message for existing users added to a gym.
+- `InvitationEmail` — staff invitation with registration link.
+- `PaymentDueEmail` — sent by billing cron when subscription becomes PAST_DUE.
+- `MembershipCanceledEmail` — sent by billing cron on auto-cancellation.
+- `PasswordResetEmail` — forgot password flow.
+
+### Members Query Builder (`src/features/members/server/queries.ts`)
+
+Shared `queryMembers({ tenantId, search, status, page })` used by both the page server component and the API route:
+- **Pagination**: 20 per page, returns `total`, `totalPages`
+- **Search**: case-insensitive on `user.name` and `user.email`
+- **Status filters**: `ACTIVE`, `PAST_DUE`, `CANCELED` (has subs but none active/past_due), `sin_plan` (no subscriptions)
+- URL state persists search/filter/page across refreshes via `searchParams`
+
+### Deployment
+
+- **Hosting**: Vercel (auto-deploy on push to `main`)
+- **Database**: Neon PostgreSQL (serverless). Use `npx prisma migrate deploy` (not `migrate dev`) in production.
+- **Images**: Vercel Blob (`BLOB_READ_WRITE_TOKEN`). Photo upload detects the token and uses Blob in production, local filesystem in development.
+- **Emails**: Resend with domain `mail.gymni.mx`
+- **Cron**: Vercel Crons — billing runs daily at 6am UTC (`vercel.json`)
+- **Domain**: `gymni.mx` + `*.gymni.mx` (wildcard for tenant subdomains). DNS via Vercel nameservers.
+- **Build**: `prisma generate && next build --turbopack` (Prisma generate needed because Vercel caches node_modules).
 
 ## Known WIP / Incomplete Areas
 
