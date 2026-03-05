@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
 
 const NAV_LINKS = [
@@ -37,6 +37,7 @@ export default function DashboardHeader() {
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
           <Avatar className="size-8">
+            <AvatarImage src={session?.user?.image ?? undefined} alt={name} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div>

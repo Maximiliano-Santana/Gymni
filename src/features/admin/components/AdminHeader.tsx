@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
 
 export default function AdminHeader() {
@@ -32,6 +32,7 @@ export default function AdminHeader() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             <Avatar className="size-8">
+              <AvatarImage src={session?.user?.image ?? undefined} alt={name} />
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
           </Button>

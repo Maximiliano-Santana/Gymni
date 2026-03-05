@@ -166,6 +166,7 @@ export const authOptions: NextAuthOptions = {
           });
           token.systemRole = dbUser?.systemRole ?? "USER";
         }
+        token.picture = user.image ?? undefined;
         token.tenants = await getTenantsBySubdomain(user.id);
       }
 
@@ -173,6 +174,12 @@ export const authOptions: NextAuthOptions = {
       if (trigger === "update" && (session as any)?.refreshTenants) {
         const userId = token.sub!;
         token.tenants = await getTenantsBySubdomain(userId);
+        // Refresh image too
+        const dbUser = await db.user.findUnique({
+          where: { id: userId },
+          select: { image: true },
+        });
+        token.picture = dbUser?.image ?? undefined;
       }
       return token;
     },
@@ -200,6 +207,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = String(token.sub);
+        session.user.image = (token.picture as string) ?? null;
         session.user.systemRole = token.systemRole ?? "USER";
         session.user.tenants = token.tenants ?? {};
       }

@@ -14,7 +14,12 @@
       "Bash(npx tsc:*)",
       "WebSearch",
       "WebFetch(domain:stripe.com)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:gympify.com)",
+      "WebFetch(domain:precios.fitcolatam.com)",
+      "WebFetch(domain:www.fitcolatam.com)",
+      "WebFetch(domain:www.crossfyapp.com)",
+      "WebFetch(domain:business.crosshero.com)"
     ]
   }
 }

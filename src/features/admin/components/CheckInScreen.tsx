@@ -115,9 +115,9 @@ export default function CheckInScreen() {
             >
               <ArrowLeft className="size-5" />
             </Button>
-            <Avatar className="size-24">
+            <Avatar className="size-32">
               <AvatarImage src={state.member.image ?? undefined} alt={state.member.name ?? ""} />
-              <AvatarFallback className="text-2xl">
+              <AvatarFallback className="text-4xl">
                 {(state.member.name ?? state.member.email).charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -170,9 +170,9 @@ export default function CheckInScreen() {
       {state.step === "already" && (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-8">
-            <Avatar className="size-24">
+            <Avatar className="size-32">
               <AvatarImage src={state.member.image ?? undefined} alt={state.member.name ?? ""} />
-              <AvatarFallback className="text-2xl">
+              <AvatarFallback className="text-4xl">
                 {(state.member.name ?? state.member.email).charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
