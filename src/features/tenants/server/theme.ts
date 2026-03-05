@@ -15,10 +15,8 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   const success   = theme?.colors?.success   ?? DEFAULT_TENANT_SETTINGS.colors.success  ?? "#2db224";
   const warning   = theme?.colors?.warning   ?? DEFAULT_TENANT_SETTINGS.colors.warning  ?? "#eb7b7b";
 
-  // secondary: usar el definido o derivar del primary
-  const secondary = theme?.colors?.secondary
-    ?? DEFAULT_TENANT_SETTINGS.colors.secondary
-    ?? deriveSecondary(primary);
+  // secondary: siempre derivado — gris tintado con el hue de la marca
+  const secondary = deriveSecondary(primary, isDark);
 
   const radius = theme?.layout?.borderRadius?.base
     ?? DEFAULT_TENANT_SETTINGS.layout.borderRadius.base;
@@ -28,8 +26,8 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   const chartColors = generateChartColors(primary);
 
   // Derivar superficies según mode + escala de grises
-  const background  = isDark ? grayColors.g900 : "#ffffff";
-  const card        = isDark ? grayColors.g800 : "#ffffff";
+  const background  = isDark ? grayColors.g900 : grayColors.g200;
+  const card        = isDark ? grayColors.g800 : grayColors.g100;
   const textPrimary = isDark ? grayColors.g100 : grayColors.g900;
   const inputBorder = adjustColor(primary, { alpha: 0.4 });
   const focusRing   = adjustColor(primary, { alpha: 0.3 });
@@ -75,8 +73,8 @@ export function generateTenantCSS(theme: TenantSettings | null): string {
   /* Semánticos */
   --primary-foreground: ${getContrastColor(primary)};
   --secondary-foreground: ${getContrastColor(secondary)};
-  --muted: ${isDark ? grayColors.g700 : grayColors.g200};
-  --muted-foreground: ${isDark ? grayColors.g300 : grayColors.g600};
+  --muted: ${isDark ? grayColors.g700 : grayColors.g300};
+  --muted-foreground: ${isDark ? grayColors.g300 : grayColors.g700};
   --accent: ${isDark ? adjustColor(primary, { alpha: 0.25 }) : lightenColor(primary, 40)};
   --accent-foreground: ${textPrimary};
   --destructive: ${warning};
@@ -215,10 +213,11 @@ function generateChartColors(primary: string) {
   };
 }
 
-/** Deriva un secondary razonable desde el primary (más claro, menos saturado) */
-function deriveSecondary(primary: string): string {
-  const { h, s, l } = hexToHsl(primary);
-  return hslToHex(h, Math.max(s - 15, 40), Math.min(l + 20, 80));
+/** Deriva secondary como gris tintado con el hue de la marca */
+function deriveSecondary(primary: string, isDark: boolean): string {
+  const { h } = hexToHsl(primary);
+  // Hue de la marca, baja saturación (gris tintado), luminosidad según modo
+  return hslToHex(h, 15, isDark ? 25 : 88);
 }
 
 /** Retorna blanco o negro según la luminancia percibida del fondo */

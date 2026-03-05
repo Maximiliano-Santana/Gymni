@@ -39,7 +39,6 @@ export default async function SettingsPage() {
           address: tenant.address,
           mode: (settings.mode as string) ?? "light",
           primaryColor: colors.primary ?? "#e86c00",
-          secondaryColor: colors.secondary ?? "",
           grayBase: colors.grayBase ?? "#545454",
           successColor: colors.success ?? "#2db224",
           warningColor: colors.warning ?? "#eb7b7b",

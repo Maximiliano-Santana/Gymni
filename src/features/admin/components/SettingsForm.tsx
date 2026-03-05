@@ -20,7 +20,6 @@ type SettingsData = {
   address: string;
   mode: string;
   primaryColor: string;
-  secondaryColor: string;
   grayBase: string;
   successColor: string;
   warningColor: string;
@@ -76,7 +75,6 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [address, setAddress] = useState(initialData.address);
   const [mode, setMode] = useState(initialData.mode);
   const [primaryColor, setPrimaryColor] = useState(initialData.primaryColor);
-  const [secondaryColor, setSecondaryColor] = useState(initialData.secondaryColor);
   const [grayBase, setGrayBase] = useState(initialData.grayBase);
   const [successColor, setSuccessColor] = useState(initialData.successColor);
   const [warningColor, setWarningColor] = useState(initialData.warningColor);
@@ -100,7 +98,6 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
             mode,
             colors: {
               primary: primaryColor,
-              ...(secondaryColor ? { secondary: secondaryColor } : {}),
               grayBase,
               success: successColor,
               warning: warningColor,
@@ -157,13 +154,6 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
             value={primaryColor}
             onChange={setPrimaryColor}
             placeholder="#e86c00"
-          />
-          <ColorField
-            label="Color secundario"
-            description="Dejar vacío para derivar del primario"
-            value={secondaryColor}
-            onChange={setSecondaryColor}
-            placeholder="Automático"
           />
           <ColorField
             label="Base de grises"

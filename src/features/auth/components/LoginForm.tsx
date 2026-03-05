@@ -135,7 +135,8 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
         </form>
       </Form>
 
-      <div className="flex w-full items-center gap-3">
+      {/* TODO: re-enable Google OAuth after fixing cross-subdomain cookies */}
+      {/* <div className="flex w-full items-center gap-3">
         <div className="h-px flex-1 bg-border" />
         <span className="text-sm text-muted-foreground">o</span>
         <div className="h-px flex-1 bg-border" />
@@ -166,7 +167,7 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
           />
         </svg>
         {googleLoading ? "Redirigiendo..." : "Continuar con Google"}
-      </Button>
+      </Button> */}
     </div>
   );
 }
