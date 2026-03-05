@@ -21,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
 import { canAccess, type AdminPage } from "@/features/admin/lib/permissions";
@@ -44,6 +45,7 @@ const NAV_ITEMS: {
 export default function AdminSidebar({ roles }: { roles: TenantRole[] }) {
   const pathname = usePathname();
   const tenant = useTenant();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const visibleItems = NAV_ITEMS.filter((item) => canAccess(item.page, roles));
 
@@ -67,7 +69,7 @@ export default function AdminSidebar({ roles }: { roles: TenantRole[] }) {
                 return (
                   <SidebarMenuItem key={item.page}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={() => isMobile && setOpenMobile(false)}>
                         <item.icon className="size-4" />
                         <span>{item.label}</span>
                       </Link>
