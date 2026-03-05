@@ -14,7 +14,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       name: "Credentials",
@@ -58,11 +57,101 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: { signIn: "/login" },
   callbacks: {
-    async signIn({ account }) {
-      // allowDangerousEmailAccountLinking + PrismaAdapter handle account
-      // linking and user creation automatically. TenantUser creation is
-      // handled in the jwt callback where user.id is the real DB ID.
-      if (account?.provider === "google") return true;
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true;
+
+      const email = user.email;
+      if (!email) return false;
+
+      // Account linking: if a user with this email already exists (e.g. from credentials),
+      // link the Google account to the existing user instead of creating a new one.
+      const existingUser = await db.user.findUnique({
+        where: { email },
+        include: { accounts: true },
+      });
+
+      if (existingUser) {
+        // Check if this Google account is already linked
+        const alreadyLinked = existingUser.accounts.some(
+          (a) =>
+            a.provider === account.provider &&
+            a.providerAccountId === account.providerAccountId
+        );
+
+        if (!alreadyLinked) {
+          await db.account.create({
+            data: {
+              userId: existingUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              refresh_token: account.refresh_token ?? null,
+              access_token: account.access_token ?? null,
+              expires_at: account.expires_at ?? null,
+              token_type: account.token_type ?? null,
+              scope: account.scope ?? null,
+              id_token: account.id_token ?? null,
+              session_state: account.session_state
+                ? String(account.session_state)
+                : null,
+            },
+          });
+        }
+
+        // Mutate user.id so the jwt callback gets the correct existing user ID
+        user.id = existingUser.id;
+      }
+
+      // Auto-create TenantUser with MEMBER role if logging in from a tenant subdomain
+      const h = await headers();
+      const subdomain = h.get("x-tenant-subdomain");
+
+      if (subdomain) {
+        const tenant = await db.tenant.findUnique({
+          where: { subdomain },
+        });
+
+        if (tenant) {
+          const userId = existingUser?.id ?? user.id;
+
+          // Check for pending invitation
+          const invitation = await db.invitation.findFirst({
+            where: {
+              email,
+              tenantId: tenant.id,
+              usedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+          });
+
+          const role = invitation?.role ?? "MEMBER";
+
+          const existingTenantUser = await db.tenantUser.findUnique({
+            where: {
+              userId_tenantId: { userId, tenantId: tenant.id },
+            },
+          });
+
+          if (!existingTenantUser) {
+            await db.tenantUser.create({
+              data: {
+                userId,
+                tenantId: tenant.id,
+                roles: [role],
+              },
+            });
+          }
+
+          // Mark invitation as used
+          if (invitation) {
+            await db.invitation.update({
+              where: { id: invitation.id },
+              data: { usedAt: new Date() },
+            });
+          }
+        }
+      }
+
       return true;
     },
 
@@ -77,61 +166,6 @@ export const authOptions: NextAuthOptions = {
           });
           token.systemRole = dbUser?.systemRole ?? "USER";
         }
-
-        // Auto-create TenantUser if signing in from a tenant subdomain.
-        // Done here (not in signIn) because user.id is guaranteed to be
-        // the real DB ID after PrismaAdapter resolves the user.
-        const h = await headers();
-        const subdomain = h.get("x-tenant-subdomain");
-
-        if (subdomain) {
-          const tenant = await db.tenant.findUnique({
-            where: { subdomain },
-          });
-
-          if (tenant) {
-            const email = user.email ?? token.email;
-
-            // Check for pending invitation
-            const invitation = email
-              ? await db.invitation.findFirst({
-                  where: {
-                    email,
-                    tenantId: tenant.id,
-                    usedAt: null,
-                    expiresAt: { gt: new Date() },
-                  },
-                })
-              : null;
-
-            const role = invitation?.role ?? "MEMBER";
-
-            const existingTenantUser = await db.tenantUser.findUnique({
-              where: {
-                userId_tenantId: { userId: user.id, tenantId: tenant.id },
-              },
-            });
-
-            if (!existingTenantUser) {
-              await db.tenantUser.create({
-                data: {
-                  userId: user.id,
-                  tenantId: tenant.id,
-                  roles: [role],
-                },
-              });
-            }
-
-            // Mark invitation as used
-            if (invitation) {
-              await db.invitation.update({
-                where: { id: invitation.id },
-                data: { usedAt: new Date() },
-              });
-            }
-          }
-        }
-
         token.tenants = await getTenantsBySubdomain(user.id);
       }
 
