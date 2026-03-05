@@ -7,15 +7,68 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SettingsData = {
   name: string;
   address: string;
   mode: string;
   primaryColor: string;
+  secondaryColor: string;
+  grayBase: string;
+  successColor: string;
+  warningColor: string;
+  borderRadius: string;
   graceDays: number;
   autoCancelDays: number;
 };
+
+function ColorField({
+  label,
+  description,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  description?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {description && (
+        <p className="text-xs text-muted-foreground mb-1">{description}</p>
+      )}
+      <div className="flex items-center gap-3 mt-1">
+        <input
+          type="color"
+          value={value || "#000000"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-10 rounded border cursor-pointer"
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="max-w-32"
+        />
+        <div
+          className="size-10 rounded border"
+          style={{ backgroundColor: value || undefined }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsForm({ initialData }: { initialData: SettingsData }) {
   const router = useRouter();
@@ -23,6 +76,11 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [address, setAddress] = useState(initialData.address);
   const [mode, setMode] = useState(initialData.mode);
   const [primaryColor, setPrimaryColor] = useState(initialData.primaryColor);
+  const [secondaryColor, setSecondaryColor] = useState(initialData.secondaryColor);
+  const [grayBase, setGrayBase] = useState(initialData.grayBase);
+  const [successColor, setSuccessColor] = useState(initialData.successColor);
+  const [warningColor, setWarningColor] = useState(initialData.warningColor);
+  const [borderRadius, setBorderRadius] = useState(initialData.borderRadius);
   const [graceDays, setGraceDays] = useState(initialData.graceDays);
   const [autoCancelDays, setAutoCancelDays] = useState(initialData.autoCancelDays);
   const [saving, setSaving] = useState(false);
@@ -40,7 +98,14 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
           address,
           settings: {
             mode,
-            colors: { primary: primaryColor },
+            colors: {
+              primary: primaryColor,
+              ...(secondaryColor ? { secondary: secondaryColor } : {}),
+              grayBase,
+              success: successColor,
+              warning: warningColor,
+            },
+            layout: { borderRadius: { base: borderRadius } },
             billing: { graceDays, autoCancelDays },
           },
         }),
@@ -87,26 +152,52 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
             />
           </div>
+          <ColorField
+            label="Color primario"
+            value={primaryColor}
+            onChange={setPrimaryColor}
+            placeholder="#e86c00"
+          />
+          <ColorField
+            label="Color secundario"
+            description="Dejar vacío para derivar del primario"
+            value={secondaryColor}
+            onChange={setSecondaryColor}
+            placeholder="Automático"
+          />
+          <ColorField
+            label="Base de grises"
+            description="Color base para la escala de grises de la interfaz"
+            value={grayBase}
+            onChange={setGrayBase}
+            placeholder="#545454"
+          />
+          <ColorField
+            label="Color de éxito"
+            value={successColor}
+            onChange={setSuccessColor}
+            placeholder="#2db224"
+          />
+          <ColorField
+            label="Color de advertencia"
+            value={warningColor}
+            onChange={setWarningColor}
+            placeholder="#eb7b7b"
+          />
           <div>
-            <Label>Color primario</Label>
-            <div className="flex items-center gap-3 mt-1">
-              <input
-                type="color"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="h-10 w-10 rounded border cursor-pointer"
-              />
-              <Input
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                placeholder="#f97316"
-                className="max-w-32"
-              />
-              <div
-                className="size-10 rounded border"
-                style={{ backgroundColor: primaryColor }}
-              />
-            </div>
+            <Label>Bordes redondeados</Label>
+            <Select value={borderRadius} onValueChange={setBorderRadius}>
+              <SelectTrigger className="max-w-48 mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0rem">Cuadrado</SelectItem>
+                <SelectItem value="0.25rem">Sutil</SelectItem>
+                <SelectItem value="0.5rem">Medio</SelectItem>
+                <SelectItem value="0.75rem">Redondeado</SelectItem>
+                <SelectItem value="1rem">Muy redondeado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

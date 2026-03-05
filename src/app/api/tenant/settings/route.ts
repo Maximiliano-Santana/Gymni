@@ -32,6 +32,13 @@ const PatchSchema = z.object({
           primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
           secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
           grayBase: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+          success: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+          warning: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        })
+        .optional(),
+      layout: z
+        .object({
+          borderRadius: z.object({ base: z.string().optional() }).optional(),
         })
         .optional(),
       billing: z
@@ -71,6 +78,17 @@ export async function PATCH(request: Request) {
             ...((currentSettings.colors as Record<string, unknown>) ?? {}),
             ...(settings.colors ?? {}),
           },
+          ...(settings.layout !== undefined
+            ? {
+                layout: {
+                  ...((currentSettings.layout as Record<string, unknown>) ?? {}),
+                  borderRadius: {
+                    ...(((currentSettings.layout as Record<string, unknown>)?.borderRadius as Record<string, unknown>) ?? {}),
+                    ...(settings.layout?.borderRadius ?? {}),
+                  },
+                },
+              }
+            : {}),
           ...(settings.billing !== undefined
             ? {
                 billing: {

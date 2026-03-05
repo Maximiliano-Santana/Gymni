@@ -26,6 +26,8 @@ export default async function SettingsPage() {
   if (!tenant) redirect("/admin");
 
   const settings = (tenant.settings as Record<string, unknown>) ?? {};
+  const colors = (settings.colors as Record<string, string>) ?? {};
+  const layout = (settings.layout as Record<string, Record<string, string>>) ?? {};
   const billing = (settings.billing as Record<string, number>) ?? {};
 
   return (
@@ -36,7 +38,12 @@ export default async function SettingsPage() {
           name: tenant.name,
           address: tenant.address,
           mode: (settings.mode as string) ?? "light",
-          primaryColor: ((settings.colors as Record<string, string>)?.primary) ?? "#f97316",
+          primaryColor: colors.primary ?? "#e86c00",
+          secondaryColor: colors.secondary ?? "",
+          grayBase: colors.grayBase ?? "#545454",
+          successColor: colors.success ?? "#2db224",
+          warningColor: colors.warning ?? "#eb7b7b",
+          borderRadius: layout.borderRadius?.base ?? "0.5rem",
           graceDays: billing.graceDays ?? 0,
           autoCancelDays: billing.autoCancelDays ?? 0,
         }}

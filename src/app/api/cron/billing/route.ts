@@ -5,22 +5,36 @@ import { NextResponse } from "next/server";
 
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
-export async function POST(request: Request) {
-  if ((await headers()).get("x-cron-key") !== process.env.CRON_KEY)
-    return NextResponse.json({ message: "Cron key inválida" }, { status: 401 });
+function isAuthorized(h: Headers): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  // Vercel Cron: Authorization: Bearer <CRON_SECRET>
+  // Manual/dev: curl -H "Authorization: Bearer <CRON_SECRET>" ...
+  return h.get("authorization") === `Bearer ${secret}`;
+}
 
+async function runBilling() {
   const now = new Date();
-
-  // ─── Platform billing (Gymni → Tenant) ───
   const platformStats = await processPlatformBilling(now);
-
-  // ─── Member billing (Tenant → Member) ───
   const memberStats = await processMemberBilling(now);
-
   return NextResponse.json(
     { message: "Cron executed", platform: platformStats, member: memberStats },
     { status: 200 }
   );
+}
+
+// Vercel Cron calls GET
+export async function GET() {
+  if (!isAuthorized(await headers()))
+    return NextResponse.json({ message: "No autorizado" }, { status: 401 });
+  return runBilling();
+}
+
+// Manual/dev calls POST
+export async function POST() {
+  if (!isAuthorized(await headers()))
+    return NextResponse.json({ message: "No autorizado" }, { status: 401 });
+  return runBilling();
 }
 
 // ─── Platform billing (unchanged logic) ───
