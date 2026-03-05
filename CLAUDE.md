@@ -188,7 +188,5 @@ Dev-gym has `billing: { graceDays: 3, autoCancelDays: 30 }` configured. All memb
 
 ## Known WIP / Incomplete Areas
 
-- `src/features/auth/server/index.ts` — `CreateUser()` is empty (unused — registration goes through the API route directly)
-- No email sending for invitations — the UI shows a copyable link instead
-- No password reset flow
-- No email notifications for PAST_DUE or upcoming due dates
+- No Stripe/LemonSqueezy/Paddle integration yet (provider fields are ready but unconnected)
+- Google OAuth is hidden (disabled in UI)
