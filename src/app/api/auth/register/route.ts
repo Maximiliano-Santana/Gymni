@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { TenantRole } from "@prisma/client";
+import { sendEmail } from "@/lib/email";
+import WelcomeEmail from "@/emails/WelcomeEmail";
 
 export async function POST(request: NextRequest) {
   //Validación de datos
@@ -149,6 +151,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send welcome email
+    const invTenant = await db.tenant.findUnique({ where: { id: invitation.tenantId }, select: { name: true } });
+    sendEmail({
+      to: newUser.email,
+      subject: `Bienvenido a ${invTenant?.name ?? "Gymni"}`,
+      react: WelcomeEmail({ gymName: invTenant?.name ?? "Gymni", userName: newUser.name }),
+    }).catch((err) => console.error("[welcome email]", err));
+
     return NextResponse.json(
       { message: `Usuario creado correctamente por invitación.` },
       { status: 200 }
@@ -194,6 +204,13 @@ export async function POST(request: NextRequest) {
         data: { roles: { set: mergedRoles } },
       });
     }
+    // Send welcome email
+    sendEmail({
+      to: newUser.email,
+      subject: `Bienvenido a ${tenant.name}`,
+      react: WelcomeEmail({ gymName: tenant.name, userName: newUser.name }),
+    }).catch((err) => console.error("[welcome email]", err));
+
     return NextResponse.json(
       { message: `Usuario creado correctamente en ${tenant.name}.` },
       { status: 200 }

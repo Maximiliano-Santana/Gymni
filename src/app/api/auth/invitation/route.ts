@@ -5,7 +5,8 @@ import {
 } from "../../lib/validation";
 import { InvitationDTO, InvitationSchema } from "@/features/auth/types/forms";
 import db from "@/lib/prisma";
-import { subscriptionDTO } from "@/features/billing-platform/types/subscription";
+import { sendEmail } from "@/lib/email";
+import InvitationEmail from "@/emails/InvitationEmail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,6 +79,18 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // Notify existing user they were added
+      const origin = req.headers.get("origin") || req.nextUrl.origin;
+      sendEmail({
+        to: newInvitation.email,
+        subject: `Te invitaron a ${tenant.name}`,
+        react: InvitationEmail({
+          gymName: tenant.name,
+          role: newInvitation.role,
+          inviteUrl: `${origin}/login`,
+        }),
+      }).catch((err) => console.error("[invitation email]", err));
+
       return NextResponse.json(
         { message: "Usuario añadido al Gym" },
         { status: 200 }
@@ -95,6 +108,20 @@ export async function POST(req: NextRequest) {
         expiresAt: expiresAt,
       },
     });
+
+    // Send invitation email
+    const origin = req.headers.get("origin") || req.nextUrl.origin;
+    const inviteUrl = `${origin}/register?invitation=${invitation.id}`;
+    sendEmail({
+      to: newInvitation.email,
+      subject: `Te invitaron a ${tenant.name}`,
+      react: InvitationEmail({
+        gymName: tenant.name,
+        role: newInvitation.role,
+        inviteUrl,
+      }),
+    }).catch((err) => console.error("[invitation email]", err));
+
     return Response.json(
       { message: "Invitación enviada", invitation },
       { status: 200 }

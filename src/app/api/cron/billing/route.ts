@@ -2,6 +2,9 @@ import db from "@/lib/prisma";
 import { getTenantSettings } from "@/features/tenants/types/settings";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { sendEmail } from "@/lib/email";
+import PaymentDueEmail from "@/emails/PaymentDueEmail";
+import MembershipCanceledEmail from "@/emails/MembershipCanceledEmail";
 
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
@@ -128,6 +131,21 @@ async function processPlatformBilling(now: Date) {
 
 // ─── Member billing (Tenant → Member) ───
 
+function formatMoney(cents: number, currency: string): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
+}
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function computeNextBillingEnd(
   current: Date,
   interval: "MONTH" | "YEAR",
@@ -158,7 +176,11 @@ async function processMemberBilling(now: Date) {
       ],
     },
     include: {
-      tenant: { select: { id: true, settings: true } },
+      tenant: { select: { id: true, name: true, settings: true } },
+      tenantUser: {
+        select: { user: { select: { email: true } } },
+      },
+      plan: { select: { name: true } },
       price: {
         select: {
           id: true,
@@ -215,6 +237,22 @@ async function processMemberBilling(now: Date) {
           }),
         ]);
 
+        // Email: renewal notification
+        const renewalEmail = sub.tenantUser?.user?.email;
+        if (renewalEmail) {
+          sendEmail({
+            to: renewalEmail,
+            subject: `Tu membresía en ${sub.tenant.name} se renovó`,
+            react: PaymentDueEmail({
+              gymName: sub.tenant.name,
+              planName: sub.plan.name,
+              amount: formatMoney(sub.price.amountCents, sub.price.currency),
+              dueDate: formatDate(addDays(sub.billingEndsAt, graceDays)),
+              isRenewal: true,
+            }),
+          }).catch((err) => console.error("[cron email renewal]", err));
+        }
+
         stats.renewals += 1;
         continue;
       }
@@ -229,6 +267,22 @@ async function processMemberBilling(now: Date) {
           where: { id: sub.id },
           data: { status: "PAST_DUE" },
         });
+
+        // Email: past due notification
+        const pastDueEmail = sub.tenantUser?.user?.email;
+        if (pastDueEmail) {
+          sendEmail({
+            to: pastDueEmail,
+            subject: `Pago pendiente en ${sub.tenant.name}`,
+            react: PaymentDueEmail({
+              gymName: sub.tenant.name,
+              planName: sub.plan.name,
+              amount: formatMoney(sub.price.amountCents, sub.price.currency),
+              dueDate: lastInvoice.dueAt ? formatDate(lastInvoice.dueAt) : "",
+            }),
+          }).catch((err) => console.error("[cron email past_due]", err));
+        }
+
         stats.pastDue += 1;
       }
     } else if (sub.status === "PAST_DUE") {
@@ -253,6 +307,17 @@ async function processMemberBilling(now: Date) {
           );
         }
         await db.$transaction(updates);
+
+        // Email: canceled notification
+        const cancelEmail = sub.tenantUser?.user?.email;
+        if (cancelEmail) {
+          sendEmail({
+            to: cancelEmail,
+            subject: `Membresía cancelada en ${sub.tenant.name}`,
+            react: MembershipCanceledEmail({ gymName: sub.tenant.name }),
+          }).catch((err) => console.error("[cron email cancel]", err));
+        }
+
         stats.canceled += 1;
       }
     }

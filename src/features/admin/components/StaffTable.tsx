@@ -168,7 +168,10 @@ export default function StaffTable({
             {inviteLink ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Invitación creada. Envía este link a <span className="font-medium text-foreground">{inviteEmail}</span> para que se registre:
+                  Invitación enviada por email a <span className="font-medium text-foreground">{inviteEmail}</span>.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  También puedes compartir el link manualmente:
                 </p>
                 <div className="flex items-center gap-2">
                   <Input value={inviteLink} readOnly className="text-xs" />

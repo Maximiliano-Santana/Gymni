@@ -1,6 +1,2 @@
-import db from "@/lib/prisma";
-import { RegisterDTO } from "../types/forms";
-export default async function CreateUser(data : RegisterDTO){
-
-    
-}
+// Auth server utilities
+// Registration is handled directly in src/app/api/auth/register/route.ts

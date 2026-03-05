@@ -10,6 +10,7 @@ import { LoginDTO, LoginSchema } from "../types/forms";
 import { FormField } from "@/components/ui/form";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { TenantTyped } from "@/features/tenants/types/settings";
 import { isStaffRole } from "@/features/auth/lib";
@@ -123,6 +124,12 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
                 )}
               />
             </div>
+            <Link
+              href="/forgot-password"
+              className="self-end text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
             <Button variant="default" type="submit">
               Iniciar sesión
             </Button>

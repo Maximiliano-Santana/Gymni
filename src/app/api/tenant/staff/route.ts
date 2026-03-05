@@ -10,8 +10,6 @@ export async function GET(request: Request) {
   try {
     // Requiere que el usuario sea OWNER (puedes agregar "ADMIN" si aplica)
     const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN"]);
-    
-    console.log("Hola mundo")
 
     // Obtener TenantUsers que NO tengan el rol MEMBER
     const staff = await db.tenantUser.findMany({
