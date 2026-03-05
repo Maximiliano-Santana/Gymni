@@ -22,6 +22,16 @@ export type MemberListItem = {
   } | null;
 };
 
+export type MemberStatusFilter = "all" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "sin_plan";
+
+export type PaginatedMembers = {
+  data: MemberListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 /** Shape returned by GET /api/tenant/members/[id] */
 export type MemberDetail = MemberListItem & {
   joinedAt: string;

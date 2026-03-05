@@ -1,48 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../lib/validation";
 import { AddMemberSchema } from "@/features/members/types";
+import type { MemberStatusFilter } from "@/features/members/types";
 import { TenantRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { queryMembers } from "@/features/members/server/queries";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN", "STAFF"]);
 
-    const tenantUsers = await db.tenantUser.findMany({
-      where: { tenantId, roles: { has: "MEMBER" } },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        memberSubscriptions: {
-          where: { status: { not: "CANCELED" } },
-          take: 1,
-          orderBy: { createdAt: "desc" },
-          include: { plan: { select: { name: true } } },
-        },
-      },
-      orderBy: { user: { name: "asc" } },
-    });
+    const { searchParams } = request.nextUrl;
+    const search = searchParams.get("search") || undefined;
+    const status = (searchParams.get("status") as MemberStatusFilter) || undefined;
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
 
-    const data = tenantUsers.map((tu) => {
-      const sub = tu.memberSubscriptions[0] ?? null;
-      return {
-        id: tu.id,
-        userId: tu.userId,
-        name: tu.user.name,
-        email: tu.user.email,
-        roles: tu.roles,
-        status: tu.status,
-        subscription: sub
-          ? {
-              planName: sub.plan.name,
-              status: sub.status,
-              billingEndsAt: sub.billingEndsAt.toISOString(),
-            }
-          : null,
-      };
-    });
-
-    return NextResponse.json({ data });
+    const result = await queryMembers({ tenantId, search, status, page });
+    return NextResponse.json(result);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
     if (msg === "403_FORBIDDEN")

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { MemberListItem } from "@/features/members/types";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import type { MemberListItem, MemberStatusFilter } from "@/features/members/types";
 import {
   Table,
   TableBody,
@@ -15,6 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Check, Copy, Plus, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Plus, Search } from "lucide-react";
 
 function statusBadge(status: string) {
   return status === "ACTIVE" ? (
@@ -38,13 +45,34 @@ function subBadge(sub: MemberListItem["subscription"]) {
   return <Badge variant={variant}>{sub.planName}</Badge>;
 }
 
+const STATUS_OPTIONS: { value: MemberStatusFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "ACTIVE", label: "Activo" },
+  { value: "PAST_DUE", label: "Con adeudo" },
+  { value: "CANCELED", label: "Cancelado" },
+  { value: "sin_plan", label: "Sin plan" },
+];
+
 export default function MembersTable({
-  initialMembers,
+  members,
+  total,
+  page,
+  totalPages,
+  initialSearch,
+  initialStatus,
 }: {
-  initialMembers: MemberListItem[];
+  members: MemberListItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  initialSearch: string;
+  initialStatus: MemberStatusFilter;
 }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(initialSearch);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -53,11 +81,39 @@ export default function MembersTable({
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const filtered = initialMembers.filter(
-    (m) =>
-      (m.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      m.email.toLowerCase().includes(search.toLowerCase())
+  const buildUrl = useCallback(
+    (overrides: Record<string, string | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value && value !== "" && value !== "all" && value !== "1") {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      }
+      const qs = params.toString();
+      return qs ? `${pathname}?${qs}` : pathname;
+    },
+    [pathname, searchParams]
   );
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (search !== initialSearch) {
+        router.push(buildUrl({ search: search || undefined, page: undefined }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleStatusChange(value: string) {
+    router.push(buildUrl({ status: value, page: undefined }));
+  }
+
+  function handlePage(newPage: number) {
+    router.push(buildUrl({ page: String(newPage) }));
+  }
 
   async function handleAdd() {
     setError("");
@@ -104,6 +160,7 @@ export default function MembersTable({
 
   return (
     <div className="space-y-4">
+      {/* Toolbar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -114,6 +171,18 @@ export default function MembersTable({
             className="pl-9"
           />
         </div>
+        <Select value={initialStatus} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
           <DialogTrigger asChild>
             <Button>
@@ -171,6 +240,12 @@ export default function MembersTable({
         </Dialog>
       </div>
 
+      {/* Counter */}
+      <p className="text-sm text-muted-foreground">
+        {total} {total === 1 ? "miembro" : "miembros"}
+      </p>
+
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -183,14 +258,14 @@ export default function MembersTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {members.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No se encontraron miembros
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((m) => (
+              members.map((m) => (
                 <TableRow
                   key={m.id}
                   className="cursor-pointer"
@@ -211,6 +286,33 @@ export default function MembersTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => handlePage(page - 1)}
+          >
+            <ChevronLeft className="mr-1 size-4" />
+            Anterior
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Página {page} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => handlePage(page + 1)}
+          >
+            Siguiente
+            <ChevronRight className="ml-1 size-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
