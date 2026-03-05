@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle, ScanLine } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle, ScanLine, Search } from "lucide-react";
 import type { CheckInMemberInfo } from "@/features/checkin/types";
 
 type ScreenState =
@@ -20,6 +21,9 @@ type ScreenState =
 export default function CheckInScreen() {
   const [state, setState] = useState<ScreenState>({ step: "scanning" });
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<CheckInMemberInfo[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const handleScan = useCallback(
     async (result: { rawValue: string }[]) => {
@@ -54,6 +58,43 @@ export default function CheckInScreen() {
     [loading, state.step]
   );
 
+  // Debounced search
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch("/api/tenant/checkin/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: search.trim() }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setSearchResults(json.data);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  function selectMember(member: CheckInMemberInfo) {
+    setSearch("");
+    setSearchResults([]);
+    if (member.lastCheckIn) {
+      setState({ step: "already", member });
+    } else {
+      setState({ step: "preview", member });
+    }
+  }
+
   async function handleConfirm() {
     if (state.step !== "preview") return;
     setLoading(true);
@@ -80,27 +121,85 @@ export default function CheckInScreen() {
 
   function resetToScan() {
     setState({ step: "scanning" });
+    setSearch("");
+    setSearchResults([]);
   }
 
   return (
     <div className="mx-auto max-w-lg">
       {state.step === "scanning" && (
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <ScanLine className="size-5" />
-              <p className="text-sm font-medium">Escanea el QR del miembro</p>
-            </div>
-            <div className="overflow-hidden rounded-lg aspect-square">
-              <Scanner
-                onScan={handleScan}
-                formats={["qr_code"]}
-                components={{ finder: true }}
-                styles={{ container: { width: "100%", height: "100%" } }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <ScanLine className="size-5" />
+                <p className="text-sm font-medium">Escanea el QR del miembro</p>
+              </div>
+              <div className="overflow-hidden rounded-lg aspect-square">
+                <Scanner
+                  onScan={handleScan}
+                  formats={["qr_code"]}
+                  components={{ finder: true }}
+                  styles={{ container: { width: "100%", height: "100%" } }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Manual search */}
+          <Card>
+            <CardContent className="space-y-3 pt-6">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Search className="size-4" />
+                <p className="text-sm font-medium">O buscar por nombre</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Nombre o email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              {searching && (
+                <p className="text-xs text-muted-foreground">Buscando...</p>
+              )}
+              {searchResults.length > 0 && (
+                <div className="space-y-1">
+                  {searchResults.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => selectMember(m)}
+                      className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent transition-colors"
+                    >
+                      <Avatar className="size-8">
+                        <AvatarImage src={m.image ?? undefined} alt={m.name ?? ""} />
+                        <AvatarFallback className="text-xs">
+                          {(m.name ?? m.email).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{m.name ?? m.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                      </div>
+                      {m.lastCheckIn && (
+                        <Badge variant="secondary" className="text-xs">Ya entró</Badge>
+                      )}
+                      {m.warning && !m.lastCheckIn && (
+                        <AlertTriangle className="size-4 text-destructive flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {search.trim() && !searching && searchResults.length === 0 && (
+                <p className="text-xs text-muted-foreground">No se encontraron miembros</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {state.step === "preview" && (
@@ -183,7 +282,7 @@ export default function CheckInScreen() {
             <Badge variant="secondary">Ya registró asistencia hoy</Badge>
             <div className="flex gap-3 w-full mt-2">
               <Button variant="outline" className="flex-1" onClick={resetToScan}>
-                Volver a escanear
+                Volver
               </Button>
               <Button className="flex-1" asChild>
                 <Link href={`/admin/members/${state.member.id}`}>Ver miembro</Link>
@@ -200,7 +299,7 @@ export default function CheckInScreen() {
             <h2 className="text-lg font-bold">Error</h2>
             <p className="text-muted-foreground text-center">{state.message}</p>
             <Button onClick={resetToScan} variant="outline">
-              Volver a escanear
+              Volver
             </Button>
           </CardContent>
         </Card>

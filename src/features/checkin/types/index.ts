@@ -4,6 +4,10 @@ export const CheckInLookupSchema = z.object({
   qrToken: z.string().uuid("Token QR inválido"),
 });
 
+export const CheckInSearchSchema = z.object({
+  query: z.string().min(1, "Búsqueda requerida"),
+});
+
 export const CheckInConfirmSchema = z.object({
   tenantUserId: z.string().min(1, "ID de miembro requerido"),
 });
