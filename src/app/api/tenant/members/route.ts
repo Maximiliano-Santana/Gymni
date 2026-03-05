@@ -54,6 +54,14 @@ export async function POST(request: Request) {
       });
     }
 
+    // Resolve tenant name and URLs for emails
+    const h = await headers();
+    const host = h.get("host") || "";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${host}`;
+    const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+    const gymName = tenant?.name ?? "Gymni";
+
     // Check if already a member of this tenant
     const existing = await db.tenantUser.findUnique({
       where: { userId_tenantId: { userId: user.id, tenantId } },
@@ -67,6 +75,17 @@ export async function POST(request: Request) {
           data: { roles: [...new Set<TenantRole>([...existing.roles, "MEMBER"])] },
         });
       }
+      // Notify existing user they've been added
+      sendEmail({
+        to: email,
+        subject: `Te han agregado a ${gymName}`,
+        react: WelcomeEmail({
+          gymName,
+          userName: user.name ?? name,
+          loginUrl: `${baseUrl}/login`,
+        }),
+      }).catch((err) => console.error("[welcome email]", err));
+
       return NextResponse.json(
         { message: "El usuario ya está registrado en este gym", data: { tenantUserId: existing.id } },
         { status: 200 }
@@ -77,27 +96,18 @@ export async function POST(request: Request) {
       data: { userId: user.id, tenantId, roles: ["MEMBER"] },
     });
 
-    // Send welcome email with temp password
-    if (tempPassword) {
-      const h = await headers();
-      const host = h.get("host") || "";
-      const protocol = host.includes("localhost") ? "http" : "https";
-      const baseUrl = `${protocol}://${host}`;
-      const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-      const gymName = tenant?.name ?? "Gymni";
-
-      sendEmail({
-        to: email,
-        subject: `Bienvenido a ${gymName}`,
-        react: WelcomeEmail({
-          gymName,
-          userName: name,
-          tempPassword,
-          loginUrl: `${baseUrl}/login`,
-          changePasswordUrl: `${baseUrl}/forgot-password`,
-        }),
-      }).catch((err) => console.error("[welcome email]", err));
-    }
+    // Send welcome email
+    sendEmail({
+      to: email,
+      subject: `Bienvenido a ${gymName}`,
+      react: WelcomeEmail({
+        gymName,
+        userName: name,
+        tempPassword: tempPassword ?? undefined,
+        loginUrl: `${baseUrl}/login`,
+        changePasswordUrl: tempPassword ? `${baseUrl}/forgot-password` : undefined,
+      }),
+    }).catch((err) => console.error("[welcome email]", err));
 
     return NextResponse.json(
       { message: "Miembro agregado correctamente", data: { tenantUserId: tenantUser.id, isNewUser: !!tempPassword } },
