@@ -7,9 +7,52 @@ import db from "@/lib/prisma";
 import { getTenantsBySubdomain } from "../../lib/auth";
 import { headers } from "next/headers";
 
+// Share cookies across subdomains so Google OAuth (which callbacks on the
+// root domain) can set a session readable by tenant subdomains.
+// Dev:  NEXTAUTH_URL=http://localhost:3000  → domain "localhost"
+// Prod: NEXTAUTH_URL=https://gymni.app      → domain ".gymni.app"
+function getCookieDomain(): string | undefined {
+  if (process.env.COOKIE_DOMAIN) return process.env.COOKIE_DOMAIN;
+  const url = process.env.NEXTAUTH_URL;
+  if (!url) return undefined;
+  const host = new URL(url).hostname;
+  return host === "localhost" ? "localhost" : `.${host}`;
+}
+
+const cookieDomain = getCookieDomain();
+const useSecureCookies =
+  process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
+  ...(cookieDomain
+    ? {
+        cookies: {
+          sessionToken: {
+            name: `${cookiePrefix}next-auth.session-token`,
+            options: {
+              httpOnly: true,
+              sameSite: "lax" as const,
+              path: "/",
+              secure: useSecureCookies,
+              domain: cookieDomain,
+            },
+          },
+          callbackUrl: {
+            name: `${cookiePrefix}next-auth.callback-url`,
+            options: {
+              httpOnly: true,
+              sameSite: "lax" as const,
+              path: "/",
+              secure: useSecureCookies,
+              domain: cookieDomain,
+            },
+          },
+        },
+      }
+    : {}),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

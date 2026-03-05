@@ -33,6 +33,12 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
     if (status !== "authenticated") return;
 
     async function redirect() {
+      // Ensure TenantUser exists — needed for Google OAuth where the callback
+      // processes on the root domain (no tenant context) then redirects here.
+      if (tenant) {
+        await fetch("/api/auth/ensure-membership", { method: "POST" });
+      }
+
       const updated = await update({ refreshTenants: true });
 
       if (!tenant) {
@@ -74,7 +80,8 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/login" });
+    // Use current origin so after Google OAuth the user returns to this subdomain
+    await signIn("google", { callbackUrl: `${window.location.origin}/login` });
   }
 
   return (
