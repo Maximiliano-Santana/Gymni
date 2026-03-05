@@ -22,6 +22,22 @@ npx prisma studio                     # Visual DB browser at localhost:5555
 npx prisma generate                   # Regenerate client after schema changes
 ```
 
+### Dev vs Prod Differences
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| **Subdomains** | `acme.localhost:3000` (middleware extracts subdomain from `.localhost`) | `acme.gymni.mx` (real wildcard DNS) |
+| **Default tenant** | `localhost:3000` maps to `dev-gym` automatically | Root domain `gymni.mx` has no tenant (landing page) |
+| **Database** | Docker PostgreSQL (`docker compose up -d`) | Neon PostgreSQL (serverless, `?sslmode=require`) |
+| **Migrations** | `npx prisma migrate dev` (creates migration files) | `npx prisma migrate deploy` (applies existing migrations only) |
+| **Images** | Saved to `public/uploads/` (local filesystem) | Vercel Blob (`BLOB_READ_WRITE_TOKEN` auto-detected) |
+| **Emails** | Resend sends if `RESEND_API_KEY` set, skips test domains | Resend via `mail.gymni.mx` verified domain |
+| **Build** | `next build --turbopack` | `prisma generate && next build --turbopack` (Vercel caches node_modules) |
+| **NEXTAUTH_URL** | `http://localhost:3000` | `https://gymni.mx` |
+| **Tunnels** | ngrok URLs auto-map to `dev-gym` tenant | N/A |
+
+**Important dev note**: On Windows, closing the dev server before running `npm run build` is required — Prisma's DLL gets locked by the running process.
+
 ## Architecture
 
 ### Multi-tenancy via Subdomain
