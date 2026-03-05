@@ -2,7 +2,7 @@ import type { TenantSettings } from "../types/settings";
 
 export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
   version: "1.0.0",
-  mode: "light",
+  mode: "dark",
 
   metadata: {
     name: "Gym&i",
@@ -10,10 +10,11 @@ export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
   },
 
   colors: {
-    primary: "#e86c00",
-    grayBase: "#545454",
-    success: "#2db224",
-    warning: "#eb7b7b",
+    primary: "#7c3aed",
+    secondary: "#a78bfa",
+    grayBase: "#5c4a7c",
+    success: "#22c55e",
+    warning: "#f87171",
   },
 
   layout: {
