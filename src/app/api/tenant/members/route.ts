@@ -6,6 +6,9 @@ import type { MemberStatusFilter } from "@/features/members/types";
 import { TenantRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { queryMembers } from "@/features/members/server/queries";
+import { sendEmail } from "@/lib/email";
+import WelcomeEmail from "@/emails/WelcomeEmail";
+import { headers } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
         });
       }
       return NextResponse.json(
-        { message: "El usuario ya está registrado en este gym", data: { tenantUserId: existing.id, tempPassword } },
+        { message: "El usuario ya está registrado en este gym", data: { tenantUserId: existing.id } },
         { status: 200 }
       );
     }
@@ -74,8 +77,30 @@ export async function POST(request: Request) {
       data: { userId: user.id, tenantId, roles: ["MEMBER"] },
     });
 
+    // Send welcome email with temp password
+    if (tempPassword) {
+      const h = await headers();
+      const host = h.get("host") || "";
+      const protocol = host.includes("localhost") ? "http" : "https";
+      const baseUrl = `${protocol}://${host}`;
+      const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+      const gymName = tenant?.name ?? "Gymni";
+
+      sendEmail({
+        to: email,
+        subject: `Bienvenido a ${gymName}`,
+        react: WelcomeEmail({
+          gymName,
+          userName: name,
+          tempPassword,
+          loginUrl: `${baseUrl}/login`,
+          changePasswordUrl: `${baseUrl}/forgot-password`,
+        }),
+      }).catch((err) => console.error("[welcome email]", err));
+    }
+
     return NextResponse.json(
-      { message: "Miembro agregado correctamente", data: { tenantUserId: tenantUser.id, tempPassword } },
+      { message: "Miembro agregado correctamente", data: { tenantUserId: tenantUser.id, isNewUser: !!tempPassword } },
       { status: 201 }
     );
   } catch (error: unknown) {

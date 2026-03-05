@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Check, ChevronLeft, ChevronRight, Copy, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 
 function statusBadge(status: string) {
   return status === "ACTIVE" ? (
@@ -78,8 +78,7 @@ export default function MembersTable({
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
-  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const buildUrl = useCallback(
     (overrides: Record<string, string | undefined>) => {
@@ -129,8 +128,8 @@ export default function MembersTable({
         setError(data.message ?? "Error al agregar miembro");
         return;
       }
-      if (data.data?.tempPassword) {
-        setCreatedPassword(data.data.tempPassword);
+      if (data.data?.isNewUser) {
+        setEmailSent(true);
       } else {
         setDialogOpen(false);
         setNewEmail("");
@@ -144,18 +143,10 @@ export default function MembersTable({
 
   function handleCloseDialog() {
     setDialogOpen(false);
-    setCreatedPassword(null);
-    setCopied(false);
+    setEmailSent(false);
     setNewEmail("");
     setNewName("");
     setError("");
-  }
-
-  async function handleCopyPassword() {
-    if (!createdPassword) return;
-    await navigator.clipboard.writeText(createdPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -192,21 +183,13 @@ export default function MembersTable({
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{createdPassword ? "Miembro agregado" : "Agregar miembro"}</DialogTitle>
+              <DialogTitle>{emailSent ? "Miembro agregado" : "Agregar miembro"}</DialogTitle>
             </DialogHeader>
-            {createdPassword ? (
+            {emailSent ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Comparte esta contraseña temporal al miembro para que pueda iniciar sesión.
+                  Se envió un email a <strong>{newEmail}</strong> con sus credenciales de acceso y un enlace para cambiar su contraseña.
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded-md bg-muted px-3 py-2 text-sm font-mono">
-                    {createdPassword}
-                  </code>
-                  <Button variant="outline" size="icon" onClick={handleCopyPassword}>
-                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  </Button>
-                </div>
                 <Button onClick={handleCloseDialog} className="w-full">
                   Listo
                 </Button>
