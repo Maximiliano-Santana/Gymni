@@ -79,6 +79,7 @@ export default function MembersTable({
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [createdMemberId, setCreatedMemberId] = useState<string | null>(null);
 
   const buildUrl = useCallback(
     (overrides: Record<string, string | undefined>) => {
@@ -128,12 +129,17 @@ export default function MembersTable({
         setError(data.message ?? "Error al agregar miembro");
         return;
       }
+      const memberId = data.data?.tenantUserId;
       if (data.data?.isNewUser) {
+        setCreatedMemberId(memberId);
         setEmailSent(true);
       } else {
-        setDialogOpen(false);
-        setNewEmail("");
-        setNewName("");
+        // Existing user — navigate directly to member detail
+        router.refresh();
+        if (memberId) {
+          router.push(`/admin/members/${memberId}`);
+        }
+        return;
       }
       router.refresh();
     } finally {
@@ -144,6 +150,7 @@ export default function MembersTable({
   function handleCloseDialog() {
     setDialogOpen(false);
     setEmailSent(false);
+    setCreatedMemberId(null);
     setNewEmail("");
     setNewName("");
     setError("");
@@ -190,8 +197,19 @@ export default function MembersTable({
                 <p className="text-sm text-muted-foreground">
                   Se envió un email a <strong>{newEmail}</strong> con sus credenciales de acceso y un enlace para cambiar su contraseña.
                 </p>
-                <Button onClick={handleCloseDialog} className="w-full">
-                  Listo
+                {createdMemberId && (
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      handleCloseDialog();
+                      router.push(`/admin/members/${createdMemberId}`);
+                    }}
+                  >
+                    Ver miembro
+                  </Button>
+                )}
+                <Button variant="outline" onClick={handleCloseDialog} className="w-full">
+                  Cerrar
                 </Button>
               </div>
             ) : (
