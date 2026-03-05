@@ -80,8 +80,7 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    // Use current origin so after Google OAuth the user returns to this subdomain
-    await signIn("google", { callbackUrl: `${window.location.origin}/login` });
+    await signIn("google", { callbackUrl: "/login" });
   }
 
   return (

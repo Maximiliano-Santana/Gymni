@@ -17,6 +17,9 @@ function computeSubdomain(hostname: string): string | null {
   if (process.env.NODE_ENV === "development") {
     // acme.localhost → "acme"
     if (host.endsWith(".localhost")) return host.slice(0, -".localhost".length);
+    // bare localhost → dev-gym (needed for Google OAuth callback which
+    // always lands on localhost, not the subdomain)
+    if (host === "localhost") return "dev-gym";
     // ngrok / cualquier tunnel sin subdominio real → default dev tenant
     if (host.endsWith(".ngrok-free.app") || host.endsWith(".ngrok-free.dev") || host.endsWith(".ngrok.io")) return "dev-gym";
   }
@@ -48,7 +51,11 @@ export default async function middleware(req: NextRequest) {
   if (!sub && isTenantOnly(pathname)) {
     return NextResponse.redirect(new URL("/app", req.url));
   }
-  if (sub && isPlatformOnly(pathname)) {
+  // In dev, bare localhost is mapped to dev-gym but should still allow /app
+  const isBareLocalhost =
+    process.env.NODE_ENV === "development" &&
+    (req.headers.get("host") || "").split(":")[0] === "localhost";
+  if (sub && !isBareLocalhost && isPlatformOnly(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
