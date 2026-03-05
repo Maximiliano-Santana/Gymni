@@ -108,7 +108,7 @@ export default function MemberDetail({
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canManageSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN");
+  const canManageSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN" || r === "STAFF");
 
   // Photo state
   const [uploading, setUploading] = useState(false);
