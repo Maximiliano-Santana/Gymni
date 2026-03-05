@@ -5,7 +5,7 @@ import { CreateMemberSubscriptionSchema } from "@/features/billing-members/types
 
 export async function POST(request: Request) {
   try {
-    const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN"]);
+    const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN", "STAFF"]);
 
     const body = await request.json().catch(() => ({}));
     const parsed = CreateMemberSubscriptionSchema.safeParse(body);

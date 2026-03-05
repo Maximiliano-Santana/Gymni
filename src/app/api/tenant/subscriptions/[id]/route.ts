@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN"]);
+    const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN", "STAFF"]);
     const { id } = await params;
 
     const sub = await db.memberSubscription.findFirst({
