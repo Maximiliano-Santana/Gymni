@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { generateTenantCSS } from "@/features/tenants/server/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,12 +35,14 @@ function ColorField({
   value,
   onChange,
   placeholder,
+  presets,
 }: {
   label: string;
   description?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  presets?: { color: string; label: string }[];
 }) {
   return (
     <div>
@@ -65,6 +68,20 @@ function ColorField({
           style={{ backgroundColor: value || undefined }}
         />
       </div>
+      {presets && (
+        <div className="flex items-center gap-2 mt-2">
+          {presets.map((p) => (
+            <button
+              key={p.color}
+              type="button"
+              title={p.label}
+              onClick={() => onChange(p.color)}
+              className={`size-7 rounded-full border-2 transition-transform hover:scale-110 ${value === p.color ? "border-foreground scale-110" : "border-transparent"}`}
+              style={{ backgroundColor: p.color }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -83,6 +100,29 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [autoCancelDays, setAutoCancelDays] = useState(initialData.autoCancelDays);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Live theme preview
+  useEffect(() => {
+    const css = generateTenantCSS({
+      version: "1.0.0",
+      mode: mode as "light" | "dark",
+      metadata: { name: "" },
+      colors: {
+        primary: primaryColor,
+        grayBase,
+        success: successColor,
+        warning: warningColor,
+      },
+      layout: { borderRadius: { base: borderRadius } },
+      assets: {},
+      billing: {},
+    });
+    const style = document.createElement("style");
+    style.setAttribute("data-theme-preview", "true");
+    style.textContent = css;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, [mode, primaryColor, grayBase, successColor, warningColor, borderRadius]);
 
   async function handleSave() {
     setSaving(true);
@@ -167,12 +207,26 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
             value={successColor}
             onChange={setSuccessColor}
             placeholder="#2db224"
+            presets={[
+              { color: "#22c55e", label: "Verde" },
+              { color: "#2db224", label: "Verde oscuro" },
+              { color: "#10b981", label: "Esmeralda" },
+              { color: "#06b6d4", label: "Cyan" },
+              { color: "#3b82f6", label: "Azul" },
+            ]}
           />
           <ColorField
             label="Color de advertencia"
             value={warningColor}
             onChange={setWarningColor}
             placeholder="#eb7b7b"
+            presets={[
+              { color: "#ef4444", label: "Rojo" },
+              { color: "#f87171", label: "Rojo claro" },
+              { color: "#eb7b7b", label: "Coral" },
+              { color: "#f59e0b", label: "Ámbar" },
+              { color: "#f97316", label: "Naranja" },
+            ]}
           />
           <div>
             <Label>Bordes redondeados</Label>

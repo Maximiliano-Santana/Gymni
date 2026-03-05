@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     return new Response(css, {
       headers: {
         'Content-Type': 'text/css; charset=utf-8',
-        'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800',
+        'Cache-Control': 'public, max-age=0, must-revalidate',
         'ETag': etag,
         'Vary': 'Host', // Cache por hostname
       },
