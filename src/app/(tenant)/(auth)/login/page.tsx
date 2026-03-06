@@ -1,7 +1,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -15,21 +14,16 @@ export default async function LoginPage() {
   const logoUrl = settings?.assets?.logo?.light;
 
   return (
-    <>
-      {logoUrl && (
-        <img src={logoUrl} alt={tenant?.name ?? "Logo"} className="h-12 object-contain mb-4" />
-      )}
-      <Card>
+      <Card className="w-full max-w-sm">
         <CardHeader>
+          {logoUrl && (
+            <img src={logoUrl} alt={tenant?.name ?? "Logo"} className="h-12 object-contain mx-auto" />
+          )}
           <CardTitle className="text-center">Login</CardTitle>
-          <CardDescription>
-            <h2 className="text-center">{tenant?.name || "Gym&i"} </h2>
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm tenant={tenant} />
         </CardContent>
       </Card>
-    </>
   );
 }

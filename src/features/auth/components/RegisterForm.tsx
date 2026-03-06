@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
@@ -129,7 +130,7 @@ export default function RegisterForm({
                 name="password"
                 render={({ field, fieldState }) => (
                   <>
-                    <Input type="password" placeholder="******" {...field} />
+                    <PasswordInput placeholder="******" {...field} />
                     {fieldState.error && (
                       <span className="text-red-500">
                         {fieldState.error.message}
