@@ -49,13 +49,10 @@ export async function GET(request: NextRequest) {
     background_color: backgroundColor,
     icons: [
       ...(iconUrl.endsWith(".svg")
-        ? [
-            { src: iconUrl, sizes: "any", type: "image/svg+xml", purpose: "any" },
-            { src: iconUrl, sizes: "any", type: "image/svg+xml", purpose: "maskable" },
-          ]
+        ? [{ src: iconUrl, sizes: "any", type: "image/svg+xml" }]
         : [
-            { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any" },
-            { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "maskable" },
+            { src: iconUrl, sizes: "192x192", type: "image/png" },
+            { src: iconUrl, sizes: "512x512", type: "image/png" },
           ]),
     ],
     shortcuts: [
