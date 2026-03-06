@@ -38,12 +38,15 @@ export default async function middleware(req: NextRequest) {
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   ) return NextResponse.next();
 
-  // 1) Tenancy SIEMPRE (req.nextUrl.hostname es la fuente más confiable)
+  // 1) Tenancy SIEMPRE
   const sub = computeSubdomain(req.nextUrl.hostname);
 
   // DEBUG: temporal — ver qué recibe el middleware en Vercel Edge
-  const debugInfo = JSON.stringify({
+  console.log("[middleware-debug]", {
+    pathname,
     nextUrlHostname: req.nextUrl.hostname,
+    nextUrlHost: req.nextUrl.host,
+    nextUrlHref: req.nextUrl.href,
     host: req.headers.get("host"),
     xForwardedHost: req.headers.get("x-forwarded-host"),
     computedSub: sub,
@@ -51,7 +54,6 @@ export default async function middleware(req: NextRequest) {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-tenant-subdomain", sub || '');
-  requestHeaders.set("x-debug-middleware", debugInfo);
 
   // 2) Rutas que no corresponden al dominio actual
   if (!sub && isTenantOnly(pathname)) {
@@ -80,9 +82,7 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  const res = NextResponse.next({ request: { headers: requestHeaders } });
-  res.headers.set("x-debug-middleware", debugInfo);
-  return res;
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = { matcher: ["/", "/:path*"] };
