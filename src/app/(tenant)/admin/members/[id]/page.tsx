@@ -91,7 +91,7 @@ export default async function MemberDetailPage({
     subscriptions: tu.memberSubscriptions.map((s) => {
       const openInvoice = s.invoices.find((inv) => inv.status === "open") ?? null;
       const paidCents = openInvoice
-        ? openInvoice.payments.reduce((sum, p) => sum + p.amountCents, 0)
+        ? openInvoice.payments.filter((p) => !p.voidedAt).reduce((sum, p) => sum + p.amountCents, 0)
         : 0;
       return {
         id: s.id,
@@ -119,6 +119,7 @@ export default async function MemberDetailPage({
       paidAt: p.paidAt.toISOString(),
       reference: p.reference,
       receivedBy: p.receivedBy,
+      voidedAt: p.voidedAt?.toISOString() ?? null,
     })),
     checkIns: tu.checkIns.map((c) => ({
       id: c.id,

@@ -91,6 +91,7 @@ type MemberData = {
     paidAt: string;
     reference: string | null;
     receivedBy: string | null;
+    voidedAt: string | null;
   }[];
   checkIns: {
     id: string;
@@ -664,9 +665,16 @@ export default function MemberDetail({
                   </TableRow>
                 ) : (
                   member.payments.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} className={p.voidedAt ? "opacity-50" : ""}>
                       <TableCell>{formatTenantDate(p.paidAt, tz)}</TableCell>
-                      <TableCell>{formatMoney(p.amountCents)}</TableCell>
+                      <TableCell>
+                        <span className={p.voidedAt ? "line-through" : ""}>
+                          {formatMoney(p.amountCents)}
+                        </span>
+                        {p.voidedAt && (
+                          <Badge variant="destructive" className="ml-2 text-[10px] px-1 py-0">Anulado</Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell>{p.reference ?? "—"}</TableCell>
                       <TableCell>{p.receivedBy ?? "—"}</TableCell>

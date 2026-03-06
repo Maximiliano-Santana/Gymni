@@ -10,3 +10,14 @@ export const CreateMemberPaymentSchema = z.object({
 });
 
 export type CreateMemberPaymentDTO = z.infer<typeof CreateMemberPaymentSchema>;
+
+export const VoidPaymentSchema = z.object({
+  reason: z.string().trim().min(1, "Motivo obligatorio").max(200),
+});
+
+export const EditPaymentSchema = z.object({
+  method: z.nativeEnum(PaymentMethod).optional(),
+  amountCents: z.number().int().min(1).optional(),
+  paidAt: z.coerce.date().optional(),
+  reference: z.string().trim().max(100).optional().nullable(),
+});

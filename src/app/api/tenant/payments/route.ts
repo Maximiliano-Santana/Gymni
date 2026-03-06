@@ -50,9 +50,9 @@ export async function POST(request: Request) {
         },
       });
 
-      // Check if fully paid
+      // Check if fully paid (exclude voided)
       const totalPaid = await tx.memberPayment.aggregate({
-        where: { invoiceId },
+        where: { invoiceId, voidedAt: null },
         _sum: { amountCents: true },
       });
 

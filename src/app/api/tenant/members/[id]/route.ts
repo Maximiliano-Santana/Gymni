@@ -88,6 +88,8 @@ export async function GET(
         method: p.method,
         paidAt: p.paidAt.toISOString(),
         reference: p.reference,
+        receivedBy: p.receivedBy,
+        voidedAt: p.voidedAt?.toISOString() ?? null,
       })),
       checkIns: tu.checkIns.map((c) => ({
         id: c.id,

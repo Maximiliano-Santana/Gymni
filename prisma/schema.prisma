@@ -368,6 +368,9 @@ model MemberPayment {
   paidAt      DateTime
   reference   String?
   receivedBy  String?
+  voidedAt    DateTime?
+  voidedBy    String?
+  voidReason  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt @default(now())
 
