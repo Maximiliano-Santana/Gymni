@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     await db.tenant.update({
       where: { id: tenantId },
       data: {
-        settings: { ...currentSettings, assets: newAssets },
+        settings: { ...currentSettings, assets: newAssets } as any,
       },
     });
 
@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest) {
     await db.tenant.update({
       where: { id: tenantId },
       data: {
-        settings: { ...currentSettings, assets: currentAssets },
+        settings: { ...currentSettings, assets: currentAssets } as any,
       },
     });
 

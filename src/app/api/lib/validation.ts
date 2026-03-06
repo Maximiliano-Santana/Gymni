@@ -19,7 +19,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, body: any) {
 
 import { NextRequest } from "next/server";
 import { getServerSession, Session } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 import db from "@/lib/prisma";
 import { headers } from "next/headers";
 import { TenantRole } from "@prisma/client";

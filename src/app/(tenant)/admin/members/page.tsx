@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 import { headers } from "next/headers";
 import MembersTable from "@/features/admin/components/MembersTable";
 import { queryMembers } from "@/features/members/server/queries";
