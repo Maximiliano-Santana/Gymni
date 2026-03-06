@@ -23,6 +23,9 @@ export function InstallBanner() {
     // Already installed
     if (window.matchMedia("(display-mode: standalone)").matches) return;
 
+    // Desktop — skip
+    if (!("ontouchstart" in window) && !navigator.maxTouchPoints) return;
+
     // Dismissed this session
     if (sessionStorage.getItem("pwa-dismissed")) return;
 
