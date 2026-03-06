@@ -57,6 +57,19 @@ export default async function MemberDetailPage({
     },
   });
 
+  // Resolve staff names for check-ins
+  const staffIds = [...new Set(tu.checkIns.map((c) => c.checkedInBy).filter(Boolean))] as string[];
+  const staffMap = new Map<string, string>();
+  if (staffIds.length > 0) {
+    const staffUsers = await db.user.findMany({
+      where: { id: { in: staffIds } },
+      select: { id: true, name: true, email: true },
+    });
+    for (const u of staffUsers) {
+      staffMap.set(u.id, u.name ?? u.email);
+    }
+  }
+
   const member = {
     id: tu.id,
     userId: tu.userId,
@@ -109,7 +122,7 @@ export default async function MemberDetailPage({
     checkIns: tu.checkIns.map((c) => ({
       id: c.id,
       checkedInAt: c.checkedInAt.toISOString(),
-      checkedInBy: c.checkedInBy,
+      checkedInBy: c.checkedInBy ? (staffMap.get(c.checkedInBy) ?? null) : null,
     })),
   };
 

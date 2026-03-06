@@ -55,4 +55,7 @@ export interface TenantSettings {
     graceDays?: number;
     autoCancelDays?: number;
   };
+
+  /** IANA timezone, e.g. "America/Mexico_City" */
+  timezone?: string;
 }

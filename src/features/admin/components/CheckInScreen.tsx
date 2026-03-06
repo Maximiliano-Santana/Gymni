@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle, ScanLine, Search } from "lucide-react";
 import type { CheckInMemberInfo } from "@/features/checkin/types";
+import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
+import { formatTenantDate } from "@/lib/timezone";
 
 type ScreenState =
   | { step: "scanning" }
@@ -19,6 +22,8 @@ type ScreenState =
   | { step: "error"; message: string };
 
 export default function CheckInScreen() {
+  const tenant = useTenant();
+  const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
   const [state, setState] = useState<ScreenState>({ step: "scanning" });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -234,7 +239,7 @@ export default function CheckInScreen() {
             </div>
             {state.member.subscription && (
               <p className="text-xs text-muted-foreground">
-                Vence: {new Date(state.member.subscription.billingEndsAt).toLocaleDateString("es-MX")}
+                Vence: {formatTenantDate(state.member.subscription.billingEndsAt, tz)}
               </p>
             )}
             {state.member.warning && (

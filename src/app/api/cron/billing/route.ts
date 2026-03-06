@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import PaymentDueEmail from "@/emails/PaymentDueEmail";
 import MembershipCanceledEmail from "@/emails/MembershipCanceledEmail";
+import { formatTenantDate } from "@/lib/timezone";
 
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
@@ -138,12 +139,8 @@ function formatMoney(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+function formatDate(d: Date, timezone?: string): string {
+  return formatTenantDate(d, timezone ?? "America/Mexico_City");
 }
 
 function computeNextBillingEnd(
@@ -205,6 +202,7 @@ async function processMemberBilling(now: Date) {
     const tenantSettings = getTenantSettings(sub.tenant);
     const graceDays = tenantSettings?.billing?.graceDays ?? 0;
     const autoCancelDays = tenantSettings?.billing?.autoCancelDays ?? 0;
+    const tenantTz = tenantSettings?.timezone ?? "America/Mexico_City";
 
     const lastInvoice = sub.invoices[0] ?? null;
 
@@ -248,7 +246,7 @@ async function processMemberBilling(now: Date) {
               gymName: sub.tenant.name,
               planName: sub.plan.name,
               amount: formatMoney(sub.price.amountCents, sub.price.currency),
-              dueDate: formatDate(addDays(sub.billingEndsAt, graceDays)),
+              dueDate: formatDate(addDays(sub.billingEndsAt, graceDays), tenantTz),
               isRenewal: true,
             }),
           }).catch((err) => console.error("[cron email renewal]", err));
@@ -279,7 +277,7 @@ async function processMemberBilling(now: Date) {
               gymName: sub.tenant.name,
               planName: sub.plan.name,
               amount: formatMoney(sub.price.amountCents, sub.price.currency),
-              dueDate: lastInvoice.dueAt ? formatDate(lastInvoice.dueAt) : "",
+              dueDate: lastInvoice.dueAt ? formatDate(lastInvoice.dueAt, tenantTz) : "",
             }),
           }).catch((err) => console.error("[cron email past_due]", err));
         }

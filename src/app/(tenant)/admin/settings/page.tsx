@@ -39,6 +39,7 @@ export default async function SettingsPage() {
         initialData={{
           name: tenant.name,
           address: tenant.address,
+          timezone: (settings.timezone as string) ?? "America/Mexico_City",
           mode: (settings.mode as string) ?? "light",
           primaryColor: colors.primary ?? "#e86c00",
           grayBase: colors.grayBase ?? "#545454",

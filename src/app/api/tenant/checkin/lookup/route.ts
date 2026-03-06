@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../../lib/validation";
 import { CheckInLookupSchema } from "@/features/checkin/types";
+import { getDayBoundsUTC } from "@/lib/timezone";
+import type { TenantSettings } from "@/features/tenants/types/settings";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,11 +37,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if already checked in today
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Check if already checked in today (in gym's timezone)
+    const tenant = await db.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    });
+    const tz = (tenant?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+    const { start: todayStart, end: todayEnd } = getDayBoundsUTC(tz);
 
     const todayCheckIn = await db.checkIn.findFirst({
       where: {

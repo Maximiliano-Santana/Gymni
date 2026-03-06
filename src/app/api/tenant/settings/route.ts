@@ -27,6 +27,7 @@ const PatchSchema = z.object({
   settings: z
     .object({
       mode: z.enum(["light", "dark"]).optional(),
+      timezone: z.string().min(1).max(50).optional(),
       colors: z
         .object({
           primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
@@ -74,6 +75,7 @@ export async function PATCH(request: Request) {
       ? {
           ...currentSettings,
           ...(settings.mode !== undefined ? { mode: settings.mode } : {}),
+          ...(settings.timezone !== undefined ? { timezone: settings.timezone } : {}),
           colors: {
             ...((currentSettings.colors as Record<string, unknown>) ?? {}),
             ...(settings.colors ?? {}),

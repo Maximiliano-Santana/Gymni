@@ -36,6 +36,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Camera, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
+import { formatTenantDate, formatTenantTime } from "@/lib/timezone";
 
 type PlanOption = {
   id: string;
@@ -122,6 +125,8 @@ export default function MemberDetail({
   userRoles: string[];
 }) {
   const router = useRouter();
+  const tenant = useTenant();
+  const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canManageSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN" || r === "STAFF");
 
@@ -381,7 +386,7 @@ export default function MemberDetail({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p><span className="text-muted-foreground">Email:</span> {member.email}</p>
-            <p><span className="text-muted-foreground">Desde:</span> {new Date(member.joinedAt).toLocaleDateString("es-MX")}</p>
+            <p><span className="text-muted-foreground">Desde:</span> {formatTenantDate(member.joinedAt, tz)}</p>
           </CardContent>
         </Card>
 
@@ -470,7 +475,7 @@ export default function MemberDetail({
                     {SUB_STATUS_LABELS[member.subscription.status] ?? member.subscription.status}
                   </Badge>
                 </p>
-                <p><span className="text-muted-foreground">Vence:</span> {new Date(member.subscription.billingEndsAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</p>
+                <p><span className="text-muted-foreground">Vence:</span> {formatTenantDate(member.subscription.billingEndsAt, tz)}</p>
               </div>
             ) : (
               <p className="text-muted-foreground">Sin suscripción activa</p>
@@ -603,7 +608,7 @@ export default function MemberDetail({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{new Date(sub.billingEndsAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</TableCell>
+                      <TableCell>{formatTenantDate(sub.billingEndsAt, tz)}</TableCell>
                       {canManageSub && (
                         <TableCell className="text-right space-x-1">
                           {sub.openInvoice && sub.openInvoice.balanceCents > 0 && (
@@ -658,7 +663,7 @@ export default function MemberDetail({
                 ) : (
                   member.payments.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell>{new Date(p.paidAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</TableCell>
+                      <TableCell>{formatTenantDate(p.paidAt, tz)}</TableCell>
                       <TableCell>{formatMoney(p.amountCents)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell>{p.reference ?? "—"}</TableCell>
@@ -688,8 +693,8 @@ export default function MemberDetail({
                 ) : (
                   member.checkIns.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell>{new Date(c.checkedInAt).toLocaleDateString("es-MX")}</TableCell>
-                      <TableCell>{new Date(c.checkedInAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</TableCell>
+                      <TableCell>{formatTenantDate(c.checkedInAt, tz)}</TableCell>
+                      <TableCell>{formatTenantTime(c.checkedInAt, tz)}</TableCell>
                       <TableCell>{c.checkedInBy ?? "—"}</TableCell>
                     </TableRow>
                   ))

@@ -12,6 +12,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
+import { formatTenantDate } from "@/lib/timezone";
 
 type PaymentRow = {
   id: string;
@@ -37,6 +40,8 @@ function formatMoney(cents: number) {
 }
 
 export default function PaymentsTable({ payments }: { payments: PaymentRow[] }) {
+  const tenant = useTenant();
+  const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
   const [search, setSearch] = useState("");
 
   const filtered = payments.filter(
@@ -90,7 +95,7 @@ export default function PaymentsTable({ payments }: { payments: PaymentRow[] }) 
               filtered.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    {new Date(p.paidAt).toLocaleDateString("es-MX")}
+                    {formatTenantDate(p.paidAt, tz)}
                   </TableCell>
                   <TableCell>
                     <div>

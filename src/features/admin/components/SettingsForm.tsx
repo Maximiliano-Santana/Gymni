@@ -20,6 +20,7 @@ import { ImageIcon, Trash2, Upload, Loader2 } from "lucide-react";
 type SettingsData = {
   name: string;
   address: string;
+  timezone: string;
   mode: string;
   primaryColor: string;
   grayBase: string;
@@ -31,6 +32,21 @@ type SettingsData = {
   logoUrl: string | null;
   faviconUrl: string | null;
 };
+
+const TIMEZONE_OPTIONS = [
+  { value: "America/Mexico_City", label: "Centro de México (UTC-6)" },
+  { value: "America/Cancun", label: "Cancún (UTC-5)" },
+  { value: "America/Tijuana", label: "Tijuana (UTC-8)" },
+  { value: "America/Mazatlan", label: "Mazatlán (UTC-7)" },
+  { value: "America/Hermosillo", label: "Hermosillo (UTC-7, sin horario de verano)" },
+  { value: "America/Bogota", label: "Bogotá (UTC-5)" },
+  { value: "America/Lima", label: "Lima (UTC-5)" },
+  { value: "America/Buenos_Aires", label: "Buenos Aires (UTC-3)" },
+  { value: "America/Santiago", label: "Santiago (UTC-3)" },
+  { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
+  { value: "America/New_York", label: "Nueva York (UTC-5)" },
+  { value: "America/Los_Angeles", label: "Los Ángeles (UTC-8)" },
+];
 
 async function compressImage(file: File, maxSize: number): Promise<Blob> {
   return new Promise((resolve) => {
@@ -218,6 +234,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const router = useRouter();
   const [name, setName] = useState(initialData.name);
   const [address, setAddress] = useState(initialData.address);
+  const [timezone, setTimezone] = useState(initialData.timezone);
   const [mode, setMode] = useState(initialData.mode);
   const [primaryColor, setPrimaryColor] = useState(initialData.primaryColor);
   const [grayBase, setGrayBase] = useState(initialData.grayBase);
@@ -266,6 +283,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
           address,
           settings: {
             mode,
+            timezone,
             colors: {
               primary: primaryColor,
               grayBase,
@@ -303,6 +321,21 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
           <div>
             <Label>Dirección</Label>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+          </div>
+          <div>
+            <Label>Zona horaria</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

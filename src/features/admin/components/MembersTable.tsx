@@ -30,6 +30,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
+import { formatTenantDate } from "@/lib/timezone";
 
 function statusBadge(status: string) {
   return status === "ACTIVE" ? (
@@ -71,6 +74,8 @@ export default function MembersTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const tenant = useTenant();
+  const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
 
   const [search, setSearch] = useState(initialSearch);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -279,7 +284,7 @@ export default function MembersTable({
                   <TableCell>{subBadge(m.subscription)}</TableCell>
                   <TableCell>
                     {m.subscription
-                      ? new Date(m.subscription.billingEndsAt).toLocaleDateString("es-MX")
+                      ? formatTenantDate(m.subscription.billingEndsAt, tz)
                       : "—"}
                   </TableCell>
                   <TableCell>{statusBadge(m.status)}</TableCell>

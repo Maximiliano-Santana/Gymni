@@ -29,4 +29,6 @@ export const DEFAULT_TENANT_SETTINGS: TenantSettings = {
     graceDays: 0,
     autoCancelDays: 0,
   },
+
+  timezone: "America/Mexico_City",
 };

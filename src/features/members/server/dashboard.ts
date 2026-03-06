@@ -1,5 +1,6 @@
 import "server-only";
 import db from "@/lib/prisma";
+import { dateToTimezoneStr, todayInTimezone, localMidnightToUTC } from "@/lib/timezone";
 
 export type MemberDashboardData = {
   member: { name: string | null };
@@ -29,24 +30,18 @@ const MONTH_NAMES = [
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
-function computeStreaks(checkIns: { checkedInAt: Date }[]) {
+function computeStreaks(checkIns: { checkedInAt: Date }[], timezone: string) {
   if (checkIns.length === 0) return { current: 0, record: 0 };
 
-  // Collect unique dates (YYYY-MM-DD) and sort descending
+  // Collect unique dates (YYYY-MM-DD) in gym's timezone and sort descending
   const uniqueDays = [
-    ...new Set(
-      checkIns.map((c) => {
-        const d = new Date(c.checkedInAt);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      })
-    ),
+    ...new Set(checkIns.map((c) => dateToTimezoneStr(c.checkedInAt, timezone))),
   ].sort((a, b) => b.localeCompare(a)); // newest first
 
   const toDate = (s: string) => new Date(s + "T00:00:00");
 
   // Current streak: walk backwards from today or yesterday
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const todayStr = todayInTimezone(timezone);
 
   let current = 0;
   let cursor = uniqueDays[0] === todayStr ? toDate(todayStr) : null;
@@ -92,19 +87,22 @@ function computeStreaks(checkIns: { checkedInAt: Date }[]) {
   return { current, record };
 }
 
-function aggregateMonthly(checkIns: { checkedInAt: Date }[]) {
-  const now = new Date();
+function aggregateMonthly(checkIns: { checkedInAt: Date }[], timezone: string) {
+  // Use gym timezone to determine "now" for building month labels
+  const nowStr = todayInTimezone(timezone);
+  const [nowY, nowM] = nowStr.split("-").map(Number);
+
   const months: { key: string; mes: string }[] = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d = new Date(nowY, nowM - 1 - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     months.push({ key, mes: MONTH_NAMES[d.getMonth()] });
   }
 
   const counts = new Map<string, number>();
   for (const c of checkIns) {
-    const d = new Date(c.checkedInAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const ds = dateToTimezoneStr(c.checkedInAt, timezone);
+    const key = ds.substring(0, 7); // "YYYY-MM"
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
@@ -113,7 +111,8 @@ function aggregateMonthly(checkIns: { checkedInAt: Date }[]) {
 
 export async function getMemberDashboardData(
   userId: string,
-  tenantId: string
+  tenantId: string,
+  timezone: string = "America/Mexico_City",
 ): Promise<MemberDashboardData | null> {
   const tenantUser = await db.tenantUser.findUnique({
     where: { userId_tenantId: { userId, tenantId } },
@@ -123,9 +122,19 @@ export async function getMemberDashboardData(
   if (!tenantUser) return null;
 
   const now = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const nowStr = todayInTimezone(timezone);
+  const [nowY, nowM] = nowStr.split("-").map(Number);
+  const thisMonthStart = localMidnightToUTC(`${nowY}-${String(nowM).padStart(2, "0")}-01`, timezone);
+  const prevMonth = new Date(nowY, nowM - 2, 1); // JS Date handles month rollover
+  const lastMonthStart = localMidnightToUTC(
+    `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}-01`,
+    timezone,
+  );
+  const sixAgo = new Date(nowY, nowM - 6, 1);
+  const sixMonthsAgo = localMidnightToUTC(
+    `${sixAgo.getFullYear()}-${String(sixAgo.getMonth() + 1).padStart(2, "0")}-01`,
+    timezone,
+  );
 
   const [subscription, thisMonthCount, lastMonthCount, allCheckIns, recentCheckIns] =
     await Promise.all([
@@ -182,8 +191,8 @@ export async function getMemberDashboardData(
       }),
     ]);
 
-  const streak = computeStreaks(allCheckIns);
-  const monthlyAttendance = aggregateMonthly(allCheckIns);
+  const streak = computeStreaks(allCheckIns, timezone);
+  const monthlyAttendance = aggregateMonthly(allCheckIns, timezone);
 
   const lastInvoice = subscription?.invoices[0] ?? null;
   const totalPaid = lastInvoice?.payments.reduce((sum, p) => sum + p.amountCents, 0) ?? 0;

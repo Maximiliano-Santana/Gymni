@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../lib/validation";
+import { todayInTimezone, localMidnightToUTC } from "@/lib/timezone";
+import type { TenantSettings } from "@/features/tenants/types/settings";
 
 export async function GET() {
   try {
     const { tenantId } = await requireTenantRoles(["OWNER", "ADMIN", "STAFF"]);
 
+    const tenantData = await db.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    });
+    const tz = (tenantData?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nowStr = todayInTimezone(tz);
+    const [nowY, nowM] = nowStr.split("-").map(Number);
+    const startOfMonth = localMidnightToUTC(`${nowY}-${String(nowM).padStart(2, "0")}-01`, tz);
     const in7Days = new Date(now);
     in7Days.setDate(in7Days.getDate() + 7);
 

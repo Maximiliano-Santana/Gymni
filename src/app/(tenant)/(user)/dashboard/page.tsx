@@ -12,6 +12,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { getMemberDashboardData } from "@/features/members/server/dashboard";
 import { AttendanceChart } from "./_components/charts";
+import db from "@/lib/prisma";
+import type { TenantSettings } from "@/features/tenants/types/settings";
+import { formatTenantDate, formatTenantTime } from "@/lib/timezone";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
@@ -38,22 +41,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function formatCurrency(amountCents: number, currency: string) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -74,9 +61,16 @@ export default async function MemberDashboard() {
   const tenantInfo = session.user.tenants?.[sub];
   if (!tenantInfo) redirect("/login");
 
+  const tenantRecord = await db.tenant.findUnique({
+    where: { id: tenantInfo.tenantId },
+    select: { settings: true },
+  });
+  const tz = (tenantRecord?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+
   const data = await getMemberDashboardData(
     session.user.id,
-    tenantInfo.tenantId
+    tenantInfo.tenantId,
+    tz,
   );
 
   if (!data) redirect("/login");
@@ -117,7 +111,7 @@ export default async function MemberDashboard() {
                     {data.subscription.planName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Vence {formatDate(data.subscription.billingEndsAt)}
+                    Vence {formatTenantDate(data.subscription.billingEndsAt, tz)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -145,7 +139,7 @@ export default async function MemberDashboard() {
                       </p>
                       {data.subscription.invoice.dueAt && (
                         <p className="mt-0.5 opacity-80">
-                          Fecha límite: {formatDate(data.subscription.invoice.dueAt)}
+                          Fecha límite: {formatTenantDate(data.subscription.invoice.dueAt, tz)}
                         </p>
                       )}
                     </>
@@ -239,11 +233,11 @@ export default async function MemberDashboard() {
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                         <p className="text-sm text-foreground">
-                          {formatDate(ci.checkedInAt)}
+                          {formatTenantDate(ci.checkedInAt, tz)}
                         </p>
                       </div>
                       <p className="text-sm text-muted-foreground text-right">
-                        {formatTime(ci.checkedInAt)}
+                        {formatTenantTime(ci.checkedInAt, tz)}
                       </p>
                     </div>
                     {i < data.recentCheckIns.length - 1 && <Separator />}

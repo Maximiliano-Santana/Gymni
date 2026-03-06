@@ -44,6 +44,19 @@ export async function GET(
     const allInvoices = tu.memberSubscriptions.flatMap((s) => s.invoices);
     const allPayments = allInvoices.flatMap((inv) => inv.payments);
 
+    // Resolve staff names for check-ins
+    const staffIds = [...new Set(tu.checkIns.map((c) => c.checkedInBy).filter(Boolean))] as string[];
+    const staffMap = new Map<string, string>();
+    if (staffIds.length > 0) {
+      const staffUsers = await db.user.findMany({
+        where: { id: { in: staffIds } },
+        select: { id: true, name: true, email: true },
+      });
+      for (const u of staffUsers) {
+        staffMap.set(u.id, u.name ?? u.email);
+      }
+    }
+
     const data = {
       id: tu.id,
       userId: tu.userId,
@@ -79,7 +92,7 @@ export async function GET(
       checkIns: tu.checkIns.map((c) => ({
         id: c.id,
         checkedInAt: c.checkedInAt.toISOString(),
-        checkedInBy: c.checkedInBy,
+        checkedInBy: c.checkedInBy ? (staffMap.get(c.checkedInBy) ?? null) : null,
       })),
     };
 

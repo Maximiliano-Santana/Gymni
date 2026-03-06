@@ -94,6 +94,25 @@ Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/featur
 
 Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green). Default theme is dark + purple.
 
+### Timezone Handling
+
+Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"America/Mexico_City"`). Default: `"America/Mexico_City"`. Configurable via Admin → Settings → "Información general".
+
+**Centralized utility** at `src/lib/timezone.ts` — zero dependencies, uses `Intl.DateTimeFormat`:
+- `getDayBoundsUTC(tz)` — returns `{ start, end }` as UTC Dates for "today" in the gym's timezone. Used in check-in duplicate detection.
+- `localMidnightToUTC(dateStr, tz)` — converts `"YYYY-MM-DD"` at midnight local to UTC Date. Used for DB query boundaries (month start, etc.).
+- `todayInTimezone(tz)` / `dateToTimezoneStr(date, tz)` — returns `"YYYY-MM-DD"` in the gym's timezone. Used for streak/attendance calculations.
+- `formatTenantDate(date, tz)` — display helper, returns e.g. `"6 mar 2026"`.
+- `formatTenantTime(date, tz)` — display helper, returns e.g. `"11:30 p.m."`.
+
+**Rules**:
+- **NEVER use `setHours(0,0,0,0)`** for "today" boundaries — it uses the server's timezone. Use `getDayBoundsUTC(tz)`.
+- **NEVER use `new Date(y, m, 1)`** for month boundaries in DB queries — use `localMidnightToUTC("YYYY-MM-01", tz)`.
+- **NEVER use `toLocaleDateString()` without timezone** — use `formatTenantDate(date, tz)` / `formatTenantTime(date, tz)`.
+- **Server components**: fetch tenant settings from DB to get timezone.
+- **Client components**: use `useTenant()` + `getTenantSettings(tenant)?.timezone ?? "America/Mexico_City"`.
+- Timestamps are stored in UTC in the database (correct). Only convert for display and day-boundary calculations.
+
 ### Type Patterns
 
 - **`TenantTyped`** (`src/features/tenants/types/settings.ts`) — `Omit<Tenant, "settings"> & { settings: TenantSettings | null }`. Used everywhere instead of Prisma's raw `Tenant` type (which has `settings: JsonValue`). Single cast point is in `validateTenantSubdomain()`.
