@@ -200,6 +200,7 @@ export default function MemberDetail({
   // Register payment dialog state
   const [payOpen, setPayOpen] = useState(false);
   const [payInvoiceId, setPayInvoiceId] = useState("");
+  const [payBalanceCents, setPayBalanceCents] = useState(0);
   const [payMethod, setPayMethod] = useState("CASH");
   const [payAmount, setPayAmount] = useState("");
   const [payRef, setPayRef] = useState("");
@@ -518,7 +519,7 @@ export default function MemberDetail({
             </div>
             <div>
               <Label>Monto (MXN)</Label>
-              <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="499.00" />
+              <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={payBalanceCents ? (payBalanceCents / 100).toFixed(2) : "499.00"} />
             </div>
             <div>
               <Label>Fecha de pago (opcional)</Label>
@@ -604,6 +605,7 @@ export default function MemberDetail({
                               variant="outline"
                               onClick={() => {
                                 setPayInvoiceId(sub.openInvoice!.id);
+                                setPayBalanceCents(sub.openInvoice!.balanceCents);
                                 setPayOpen(true);
                               }}
                             >
