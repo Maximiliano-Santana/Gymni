@@ -45,8 +45,9 @@ export default async function MemberDetailPage({
   if (!tu) notFound();
 
   const activeSub = tu.memberSubscriptions.find((s) => s.status !== "CANCELED") ?? null;
-  const allInvoices = tu.memberSubscriptions.flatMap((s) => s.invoices);
-  const allPayments = allInvoices.flatMap((inv) => inv.payments);
+  const allPayments = tu.memberSubscriptions
+    .flatMap((s) => s.invoices)
+    .flatMap((inv) => inv.payments);
 
   // Fetch available plans for assignment dialog
   const plans = await db.membershipPlan.findMany({
@@ -74,16 +75,28 @@ export default async function MemberDetailPage({
           billingEndsAt: activeSub.billingEndsAt.toISOString(),
         }
       : null,
-    invoices: allInvoices.map((inv) => {
-      const paidCents = inv.payments.reduce((sum, p) => sum + p.amountCents, 0);
+    subscriptions: tu.memberSubscriptions.map((s) => {
+      const openInvoice = s.invoices.find((inv) => inv.status === "open") ?? null;
+      const paidCents = openInvoice
+        ? openInvoice.payments.reduce((sum, p) => sum + p.amountCents, 0)
+        : 0;
       return {
-        id: inv.id,
-        amountCents: inv.amountCents,
-        paidCents,
-        balanceCents: inv.amountCents - paidCents,
-        currency: inv.currency,
-        status: inv.status,
-        issuedAt: inv.issuedAt.toISOString(),
+        id: s.id,
+        planName: s.plan.name,
+        status: s.status,
+        billingEndsAt: s.billingEndsAt.toISOString(),
+        createdAt: s.createdAt.toISOString(),
+        amountCents: s.price.amountCents,
+        currency: s.price.currency,
+        intervalLabel: `${s.price.interval === "YEAR" ? (s.price.intervalCount === 1 ? "Anual" : `${s.price.intervalCount} años`) : s.price.intervalCount === 1 ? "Mensual" : s.price.intervalCount === 3 ? "Trimestral" : s.price.intervalCount === 4 ? "Cuatrimestral" : s.price.intervalCount === 6 ? "Semestral" : `${s.price.intervalCount} meses`}`,
+        openInvoice: openInvoice
+          ? {
+              id: openInvoice.id,
+              amountCents: openInvoice.amountCents,
+              balanceCents: openInvoice.amountCents - paidCents,
+              currency: openInvoice.currency,
+            }
+          : null,
       };
     }),
     payments: allPayments.map((p) => ({

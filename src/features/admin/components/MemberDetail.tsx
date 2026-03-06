@@ -65,14 +65,21 @@ type MemberData = {
     status: string;
     billingEndsAt: string;
   } | null;
-  invoices: {
+  subscriptions: {
     id: string;
-    amountCents: number;
-    paidCents: number;
-    balanceCents: number;
-    currency: string;
+    planName: string;
     status: string;
-    issuedAt: string;
+    billingEndsAt: string;
+    createdAt: string;
+    amountCents: number;
+    currency: string;
+    intervalLabel: string;
+    openInvoice: {
+      id: string;
+      amountCents: number;
+      balanceCents: number;
+      currency: string;
+    } | null;
   }[];
   payments: {
     id: string;
@@ -187,6 +194,7 @@ export default function MemberDetail({
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [selectedPriceId, setSelectedPriceId] = useState("");
+  const [billingStartDate, setBillingStartDate] = useState("");
   const [assigning, setAssigning] = useState(false);
 
   // Register payment dialog state
@@ -197,6 +205,9 @@ export default function MemberDetail({
   const [payRef, setPayRef] = useState("");
   const [paying, setPaying] = useState(false);
 
+  // Delete subscription state
+  const [deleteSubId, setDeleteSubId] = useState<string | null>(null);
+
   // Delete member dialog state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
@@ -205,7 +216,7 @@ export default function MemberDetail({
   const [error, setError] = useState("");
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-  const openInvoices = member.invoices.filter((inv) => inv.status === "open");
+  const canDeleteSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN");
 
   async function handleAssignPlan() {
     setError("");
@@ -218,6 +229,7 @@ export default function MemberDetail({
           tenantUserId: member.id,
           planId: selectedPlanId,
           priceId: selectedPriceId,
+          ...(billingStartDate && { billingStartDate }),
         }),
       });
       if (!res.ok) {
@@ -238,6 +250,16 @@ export default function MemberDetail({
       method: "PATCH",
     });
     if (res.ok) router.refresh();
+  }
+
+  async function handleDeleteSub(subId: string) {
+    const res = await fetch(`/api/tenant/subscriptions/${subId}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setDeleteSubId(null);
+      router.refresh();
+    }
   }
 
   async function handleDeleteMember() {
@@ -395,6 +417,19 @@ export default function MemberDetail({
                           </Select>
                         </div>
                       )}
+                      {selectedPriceId && (
+                        <div>
+                          <Label>Fecha de inicio (opcional)</Label>
+                          <Input
+                            type="date"
+                            value={billingStartDate}
+                            onChange={(e) => setBillingStartDate(e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Si el miembro ya pagó antes de registrarse
+                          </p>
+                        </div>
+                      )}
                       {error && <p className="text-sm text-destructive">{error}</p>}
                       <Button
                         onClick={handleAssignPlan}
@@ -459,94 +494,126 @@ export default function MemberDetail({
         </Card>
       </div>
 
-      {/* Tabs: Invoices + Payments + Check-ins */}
-      <Tabs defaultValue="invoices">
+      {/* Payment dialog (shared, opened from subscription rows) */}
+      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar pago</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Método</Label>
+              <Select value={payMethod} onValueChange={setPayMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Efectivo</SelectItem>
+                  <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                  <SelectItem value="CARD">Tarjeta</SelectItem>
+                  <SelectItem value="OTHER">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Monto (MXN)</Label>
+              <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="499.00" />
+            </div>
+            <div>
+              <Label>Referencia (opcional)</Label>
+              <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="Folio, recibo..." />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button onClick={handlePayment} disabled={paying || !payInvoiceId || !payAmount} className="w-full">
+              {paying ? "Registrando..." : "Registrar pago"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete subscription confirmation dialog */}
+      <Dialog open={!!deleteSubId} onOpenChange={(open) => { if (!open) setDeleteSubId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar suscripción</DialogTitle>
+            <DialogDescription>
+              Se eliminarán la suscripción, sus facturas y pagos asociados. Esta acción es irreversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteSubId(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => deleteSubId && handleDeleteSub(deleteSubId)}>
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tabs: Subscriptions + Payments + Check-ins */}
+      <Tabs defaultValue="subscriptions">
         <TabsList>
-          <TabsTrigger value="invoices">Facturas</TabsTrigger>
+          <TabsTrigger value="subscriptions">Suscripciones</TabsTrigger>
           <TabsTrigger value="payments">Pagos</TabsTrigger>
           <TabsTrigger value="checkins">Check-ins</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="invoices" className="space-y-3">
-          {openInvoices.length > 0 && canManageSub && (
-            <Dialog open={payOpen} onOpenChange={setPayOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">Registrar pago</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Registrar pago</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Factura</Label>
-                    <Select value={payInvoiceId} onValueChange={setPayInvoiceId}>
-                      <SelectTrigger><SelectValue placeholder="Seleccionar factura" /></SelectTrigger>
-                      <SelectContent>
-                        {openInvoices.map((inv) => (
-                          <SelectItem key={inv.id} value={inv.id}>
-                            Pendiente: {formatMoney(inv.balanceCents, inv.currency)} — {new Date(inv.issuedAt).toLocaleDateString("es-MX")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Método</Label>
-                    <Select value={payMethod} onValueChange={setPayMethod}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CASH">Efectivo</SelectItem>
-                        <SelectItem value="TRANSFER">Transferencia</SelectItem>
-                        <SelectItem value="CARD">Tarjeta</SelectItem>
-                        <SelectItem value="OTHER">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Monto (MXN)</Label>
-                    <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="499.00" />
-                  </div>
-                  <div>
-                    <Label>Referencia (opcional)</Label>
-                    <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="Folio, recibo..." />
-                  </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button onClick={handlePayment} disabled={paying || !payInvoiceId || !payAmount} className="w-full">
-                    {paying ? "Registrando..." : "Registrar pago"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+        <TabsContent value="subscriptions">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Pendiente</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Frecuencia</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead>Vence</TableHead>
+                  {canManageSub && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {member.invoices.length === 0 ? (
+                {member.subscriptions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-6">Sin facturas</TableCell>
+                    <TableCell colSpan={canManageSub ? 5 : 4} className="text-center text-muted-foreground py-6">Sin suscripciones</TableCell>
                   </TableRow>
                 ) : (
-                  member.invoices.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell>{new Date(inv.issuedAt).toLocaleDateString("es-MX")}</TableCell>
-                      <TableCell>{formatMoney(inv.amountCents, inv.currency)}</TableCell>
-                      <TableCell className={inv.balanceCents > 0 ? "text-destructive font-medium" : ""}>
-                        {inv.balanceCents > 0 ? formatMoney(inv.balanceCents, inv.currency) : "—"}
-                      </TableCell>
+                  member.subscriptions.map((sub) => (
+                    <TableRow key={sub.id}>
+                      <TableCell className="font-medium">{sub.planName}</TableCell>
+                      <TableCell>{sub.intervalLabel} — {formatMoney(sub.amountCents, sub.currency)}</TableCell>
                       <TableCell>
-                        <Badge variant={inv.status === "paid" ? "default" : inv.status === "open" ? "secondary" : "destructive"}>
-                          {inv.status}
+                        <Badge variant={sub.status === "ACTIVE" ? "default" : sub.status === "PAST_DUE" ? "secondary" : "destructive"}>
+                          {sub.status}
                         </Badge>
+                        {sub.openInvoice && sub.openInvoice.balanceCents > 0 && (
+                          <span className="ml-2 text-xs text-destructive">
+                            Debe {formatMoney(sub.openInvoice.balanceCents, sub.openInvoice.currency)}
+                          </span>
+                        )}
                       </TableCell>
+                      <TableCell>{new Date(sub.billingEndsAt).toLocaleDateString("es-MX")}</TableCell>
+                      {canManageSub && (
+                        <TableCell className="text-right space-x-1">
+                          {sub.openInvoice && sub.openInvoice.balanceCents > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setPayInvoiceId(sub.openInvoice!.id);
+                                setPayOpen(true);
+                              }}
+                            >
+                              Registrar pago
+                            </Button>
+                          )}
+                          {canDeleteSub && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteSubId(sub.id)}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
