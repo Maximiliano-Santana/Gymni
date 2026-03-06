@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { headers } from "next/headers";
 import MembersTable from "@/features/admin/components/MembersTable";
+import { getSubdomain } from "@/features/tenants/lib";
 import { queryMembers } from "@/features/members/server/queries";
 import type { MemberStatusFilter } from "@/features/members/types";
 
@@ -10,13 +10,13 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ search?: string; status?: string; page?: string }>;
 }) {
-  const [session, h, params] = await Promise.all([
+  const [session, sub, params] = await Promise.all([
     getServerSession(authOptions),
-    headers(),
+    getSubdomain(),
     searchParams,
   ]);
-  const sub = h.get("x-tenant-subdomain")!;
-  const tenantId = session!.user.tenants?.[sub]?.tenantId as string;
+  const subdomain = sub ?? "";
+  const tenantId = session!.user.tenants?.[subdomain]?.tenantId as string;
 
   const search = params.search || undefined;
   const status = (params.status as MemberStatusFilter) || undefined;

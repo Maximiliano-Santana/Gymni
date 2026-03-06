@@ -1,22 +1,21 @@
 import type { ReactNode } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getSubdomain } from "@/features/tenants/lib";
 
 export default async function TenantMemberLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [session, h] = await Promise.all([
+  const [session, sub] = await Promise.all([
     getServerSession(authOptions),
-    headers(),
+    getSubdomain(),
   ]);
 
   if (!session) redirect("/login");
 
-  const sub = h.get("x-tenant-subdomain");
   if (!sub) redirect("/app");
 
   const tenantInfo = session.user.tenants?.[sub];

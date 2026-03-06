@@ -4,8 +4,8 @@ import {
   CreateSubscriptionSchema,
   subscriptionDTO,
 } from "@/features/billing-platform/types/subscription";
-import { headers } from "next/headers";
 import db from "@/lib/prisma";
+import { getSubdomain } from "@/features/tenants/lib";
 
 export async function POST(req: Request) {
   try {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     }
 
     //Validación de tenant
-    const subdomain = (await headers()).get("x-tenant-subdomain");
+    const subdomain = await getSubdomain();
     if (!subdomain) {
       return NextResponse.json(
         { message: "Request sin subdominio en header" },

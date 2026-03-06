@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { headers } from "next/headers";
 import db from "@/lib/prisma";
+import { getSubdomain } from "@/features/tenants/lib";
 import { generateQrToken } from "@/features/checkin/lib/qr-token";
 
 export async function GET() {
   try {
-    const [session, h] = await Promise.all([
+    const [session, sub] = await Promise.all([
       getServerSession(authOptions),
-      headers(),
+      getSubdomain(),
     ]);
     if (!session) {
       return NextResponse.json({ message: "No autenticado" }, { status: 401 });
     }
-
-    const sub = h.get("x-tenant-subdomain");
     if (!sub) {
       return NextResponse.json({ message: "Sin contexto de tenant" }, { status: 400 });
     }

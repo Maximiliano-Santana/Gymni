@@ -20,11 +20,14 @@ function extractSubdomainFromHost(host: string | null): string | null {
   return sub === "www" ? null : sub;
 }
 
+/** Devuelve el subdomain actual desde headers. Usa host como fallback. */
+export async function getSubdomain(): Promise<string | null> {
+  const h = await headers();
+  return h.get("x-tenant-subdomain") || extractSubdomainFromHost(h.get("host"));
+}
+
 export async function validateTenantSubdomain(): Promise<TenantTyped | null> {
-  const headerList = await headers();
-  const subdomain =
-    headerList.get("x-tenant-subdomain") ||
-    extractSubdomainFromHost(headerList.get("host"));
+  const subdomain = await getSubdomain();
 
   // Sin subdomain = dominio raíz = páginas de marketing, no necesita tenant
   if (!subdomain) return null;

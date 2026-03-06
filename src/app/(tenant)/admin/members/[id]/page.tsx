@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { getSubdomain } from "@/features/tenants/lib";
 import db from "@/lib/prisma";
 import MemberDetail from "@/features/admin/components/MemberDetail";
 
@@ -11,13 +11,13 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, h] = await Promise.all([
+  const [session, sub] = await Promise.all([
     getServerSession(authOptions),
-    headers(),
+    getSubdomain(),
   ]);
-  const sub = h.get("x-tenant-subdomain")!;
-  const tenantId = session!.user.tenants?.[sub]?.tenantId as string;
-  const roles = session!.user.tenants?.[sub]?.roles ?? [];
+  const subdomain = sub ?? "";
+  const tenantId = session!.user.tenants?.[subdomain]?.tenantId as string;
+  const roles = session!.user.tenants?.[subdomain]?.roles ?? [];
 
   const tu = await db.tenantUser.findFirst({
     where: { id, tenantId, roles: { has: "MEMBER" } },

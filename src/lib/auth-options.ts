@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import db from "@/lib/prisma";
 import { getTenantsBySubdomain } from "@/app/api/lib/auth";
-import { headers } from "next/headers";
+import { getSubdomain } from "@/features/tenants/lib";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -103,8 +103,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Auto-create TenantUser with MEMBER role if logging in from a tenant subdomain
-      const h = await headers();
-      const subdomain = h.get("x-tenant-subdomain");
+      const subdomain = await getSubdomain();
 
       if (subdomain) {
         const tenant = await db.tenant.findUnique({

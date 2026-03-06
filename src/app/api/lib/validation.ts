@@ -21,8 +21,8 @@ import { NextRequest } from "next/server";
 import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import db from "@/lib/prisma";
-import { headers } from "next/headers";
 import { TenantRole } from "@prisma/client";
+import { getSubdomain } from "@/features/tenants/lib";
 
 export async function validateSuperAdmin() {
   const session = await getServerSession(authOptions);
@@ -78,7 +78,7 @@ export async function validateTenantStaff(tenantId: string) {
 export async function requireTenantRoles(
   needed: TenantRole[]
 ) {
-  const sub = (await headers()).get("x-tenant-subdomain");
+  const sub = await getSubdomain();
   if (!sub) throw new Error("401"); // sin contexto de tenant
 
   const s = await getServerSession(authOptions);

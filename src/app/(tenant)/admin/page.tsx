@@ -1,17 +1,17 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { headers } from "next/headers";
 import db from "@/lib/prisma";
+import { getSubdomain } from "@/features/tenants/lib";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CreditCard, AlertTriangle, DollarSign } from "lucide-react";
 
 export default async function AdminDashboardPage() {
-  const [session, h] = await Promise.all([
+  const [session, sub] = await Promise.all([
     getServerSession(authOptions),
-    headers(),
+    getSubdomain(),
   ]);
-  const sub = h.get("x-tenant-subdomain")!;
-  const tenantId = session!.user.tenants?.[sub]?.tenantId as string;
+  const subdomain = sub ?? "";
+  const tenantId = session!.user.tenants?.[subdomain]?.tenantId as string;
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
