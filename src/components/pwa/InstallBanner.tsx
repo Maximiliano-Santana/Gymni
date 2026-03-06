@@ -8,12 +8,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-declare global {
-  interface Window {
-    __pwaPrompt: BeforeInstallPromptEvent | null;
-  }
-}
-
 export function InstallBanner() {
   const [visible, setVisible] = useState(false);
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -31,9 +25,6 @@ export function InstallBanner() {
 
     setVisible(true);
 
-    // Grab early-captured prompt
-    if (window.__pwaPrompt) setPrompt(window.__pwaPrompt);
-
     const handler = (e: Event) => {
       e.preventDefault();
       setPrompt(e as BeforeInstallPromptEvent);
@@ -50,7 +41,6 @@ export function InstallBanner() {
       const { outcome } = await prompt.userChoice;
       if (outcome === "accepted") setVisible(false);
     } else {
-      // No native prompt available — show manual instructions
       setShowTip(true);
     }
   };
