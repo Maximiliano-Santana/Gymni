@@ -4,6 +4,7 @@ export const CreateMemberSubscriptionSchema = z.object({
   tenantUserId: z.string().min(1, "Miembro obligatorio"),
   planId: z.string().min(1, "Plan obligatorio"),
   priceId: z.string().min(1, "Precio obligatorio"),
+  billingStartDate: z.string().date().optional(),
 });
 
 export type CreateMemberSubscriptionDTO = z.infer<typeof CreateMemberSubscriptionSchema>;
