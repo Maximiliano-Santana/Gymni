@@ -50,6 +50,7 @@ export default async function PaymentsPage() {
     memberEmail: p.invoice.subscription.tenantUser.user.email,
     planName: p.invoice.subscription.plan.name,
     invoiceStatus: p.invoice.status,
+    receivedBy: p.receivedBy,
   }));
 
   return (

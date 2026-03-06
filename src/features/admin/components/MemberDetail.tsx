@@ -90,6 +90,7 @@ type MemberData = {
     method: string;
     paidAt: string;
     reference: string | null;
+    receivedBy: string | null;
   }[];
   checkIns: {
     id: string;
@@ -653,12 +654,13 @@ export default function MemberDetail({
                   <TableHead>Monto</TableHead>
                   <TableHead>Método</TableHead>
                   <TableHead>Referencia</TableHead>
+                  <TableHead>Registrado por</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {member.payments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-6">Sin pagos</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-6">Sin pagos</TableCell>
                   </TableRow>
                 ) : (
                   member.payments.map((p) => (
@@ -667,6 +669,7 @@ export default function MemberDetail({
                       <TableCell>{formatMoney(p.amountCents)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell>{p.reference ?? "—"}</TableCell>
+                      <TableCell>{p.receivedBy ?? "—"}</TableCell>
                     </TableRow>
                   ))
                 )}

@@ -118,6 +118,7 @@ export default async function MemberDetailPage({
       method: p.method,
       paidAt: p.paidAt.toISOString(),
       reference: p.reference,
+      receivedBy: p.receivedBy,
     })),
     checkIns: tu.checkIns.map((c) => ({
       id: c.id,

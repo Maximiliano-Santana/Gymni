@@ -26,6 +26,7 @@ type PaymentRow = {
   memberEmail: string;
   planName: string;
   invoiceStatus: string;
+  receivedBy: string | null;
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -82,12 +83,13 @@ export default function PaymentsTable({ payments }: { payments: PaymentRow[] }) 
               <TableHead>Monto</TableHead>
               <TableHead>Método</TableHead>
               <TableHead>Referencia</TableHead>
+              <TableHead>Registrado por</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No se encontraron pagos
                 </TableCell>
               </TableRow>
@@ -112,6 +114,9 @@ export default function PaymentsTable({ payments }: { payments: PaymentRow[] }) 
                   <TableCell>{METHOD_LABELS[p.method] ?? p.method}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.reference ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {p.receivedBy ?? "—"}
                   </TableCell>
                 </TableRow>
               ))

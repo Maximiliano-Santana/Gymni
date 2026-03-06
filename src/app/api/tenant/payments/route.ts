@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../lib/validation";
 import { CreateMemberPaymentSchema } from "@/features/billing-members/types/payment";
@@ -17,6 +19,10 @@ export async function POST(request: Request) {
     }
 
     const { invoiceId, method, amountCents, paidAt, reference } = parsed.data;
+
+    // Get staff name for receivedBy
+    const session = await getServerSession(authOptions);
+    const staffName = session?.user?.name ?? session?.user?.email ?? null;
 
     // Validate invoice belongs to tenant
     const invoice = await db.memberInvoice.findFirst({
@@ -40,6 +46,7 @@ export async function POST(request: Request) {
           amountCents,
           paidAt: paidAt ?? new Date(),
           reference,
+          receivedBy: staffName,
         },
       });
 
