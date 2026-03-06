@@ -64,9 +64,9 @@ export async function POST(request: Request) {
           if (price) {
             const newEnd = new Date(invoice.subscription.billingEndsAt);
             if (price.interval === "YEAR") {
-              newEnd.setFullYear(newEnd.getFullYear() + price.intervalCount);
+              newEnd.setUTCFullYear(newEnd.getUTCFullYear() + price.intervalCount);
             } else {
-              newEnd.setMonth(newEnd.getMonth() + price.intervalCount);
+              newEnd.setUTCMonth(newEnd.getUTCMonth() + price.intervalCount);
             }
             await tx.memberSubscription.update({
               where: { id: invoice.subscriptionId },

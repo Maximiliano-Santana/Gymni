@@ -95,6 +95,12 @@ type MemberData = {
   }[];
 };
 
+const SUB_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Activa",
+  PAST_DUE: "Adeudo",
+  CANCELED: "Cancelada",
+};
+
 function formatMoney(cents: number, currency = "MXN") {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(cents / 100);
 }
@@ -461,10 +467,10 @@ export default function MemberDetail({
                 <p>
                   <span className="text-muted-foreground">Estado:</span>{" "}
                   <Badge variant={member.subscription.status === "ACTIVE" ? "default" : "destructive"}>
-                    {member.subscription.status}
+                    {SUB_STATUS_LABELS[member.subscription.status] ?? member.subscription.status}
                   </Badge>
                 </p>
-                <p><span className="text-muted-foreground">Vence:</span> {new Date(member.subscription.billingEndsAt).toLocaleDateString("es-MX")}</p>
+                <p><span className="text-muted-foreground">Vence:</span> {new Date(member.subscription.billingEndsAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</p>
               </div>
             ) : (
               <p className="text-muted-foreground">Sin suscripción activa</p>
@@ -589,7 +595,7 @@ export default function MemberDetail({
                       <TableCell>{sub.intervalLabel} — {formatMoney(sub.amountCents, sub.currency)}</TableCell>
                       <TableCell>
                         <Badge variant={sub.status === "ACTIVE" ? "default" : sub.status === "PAST_DUE" ? "secondary" : "destructive"}>
-                          {sub.status}
+                          {SUB_STATUS_LABELS[sub.status] ?? sub.status}
                         </Badge>
                         {sub.openInvoice && sub.openInvoice.balanceCents > 0 && (
                           <span className="ml-2 text-xs text-destructive">
@@ -597,7 +603,7 @@ export default function MemberDetail({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{new Date(sub.billingEndsAt).toLocaleDateString("es-MX")}</TableCell>
+                      <TableCell>{new Date(sub.billingEndsAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</TableCell>
                       {canManageSub && (
                         <TableCell className="text-right space-x-1">
                           {sub.openInvoice && sub.openInvoice.balanceCents > 0 && (
@@ -652,7 +658,7 @@ export default function MemberDetail({
                 ) : (
                   member.payments.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell>{new Date(p.paidAt).toLocaleDateString("es-MX")}</TableCell>
+                      <TableCell>{new Date(p.paidAt).toLocaleDateString("es-MX", { timeZone: "UTC" })}</TableCell>
                       <TableCell>{formatMoney(p.amountCents)}</TableCell>
                       <TableCell>{p.method}</TableCell>
                       <TableCell>{p.reference ?? "—"}</TableCell>

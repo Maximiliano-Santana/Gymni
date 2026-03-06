@@ -83,9 +83,9 @@ async function processPlatformBilling(now: Date) {
       const periodStart = trialEnd;
       const currentPeriodEnd = new Date(periodStart);
       if (subscription.price.interval === "MONTH") {
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+        currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() + 1);
       } else {
-        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+        currentPeriodEnd.setUTCFullYear(currentPeriodEnd.getUTCFullYear() + 1);
       }
 
       const invoiceDueAt = addDays(periodStart, graceDays);
@@ -153,9 +153,9 @@ function computeNextBillingEnd(
 ): Date {
   const next = new Date(current);
   if (interval === "MONTH") {
-    next.setMonth(next.getMonth() + intervalCount);
+    next.setUTCMonth(next.getUTCMonth() + intervalCount);
   } else {
-    next.setFullYear(next.getFullYear() + intervalCount);
+    next.setUTCFullYear(next.getUTCFullYear() + intervalCount);
   }
   return next;
 }
@@ -172,6 +172,7 @@ async function processMemberBilling(now: Date) {
     where: {
       OR: [
         { status: "ACTIVE", billingEndsAt: { lte: now } },
+        { status: "ACTIVE", invoices: { some: { status: "open", dueAt: { lte: now } } } },
         { status: "PAST_DUE" },
       ],
     },

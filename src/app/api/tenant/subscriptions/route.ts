@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import { requireTenantRoles } from "../../lib/validation";
 import { CreateMemberSubscriptionSchema } from "@/features/billing-members/types/subscription";
+import { getTenantSettings } from "@/features/tenants/types/settings";
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { tenantUserId, planId, priceId } = parsed.data;
+    const { tenantUserId, planId, priceId, billingStartDate } = parsed.data;
 
     // Validate member belongs to tenant
     const member = await db.tenantUser.findFirst({
@@ -40,13 +41,21 @@ export async function POST(request: Request) {
       data: { status: "CANCELED", canceledAt: new Date() },
     });
 
-    // Calculate billing end date
-    const billingEndsAt = new Date();
+    // Calculate billing end date (use UTC to avoid timezone day-shift)
+    const startDate = billingStartDate
+      ? new Date(billingStartDate + "T00:00:00Z")
+      : new Date();
+    const billingEndsAt = new Date(startDate);
     if (price.interval === "YEAR") {
-      billingEndsAt.setFullYear(billingEndsAt.getFullYear() + price.intervalCount);
+      billingEndsAt.setUTCFullYear(billingEndsAt.getUTCFullYear() + price.intervalCount);
     } else {
-      billingEndsAt.setMonth(billingEndsAt.getMonth() + price.intervalCount);
+      billingEndsAt.setUTCMonth(billingEndsAt.getUTCMonth() + price.intervalCount);
     }
+
+    // Get tenant grace days for invoice dueAt
+    const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { settings: true } });
+    const graceDays = tenant ? getTenantSettings(tenant)?.billing?.graceDays ?? 0 : 0;
+    const dueAt = new Date(startDate.getTime() + graceDays * 86_400_000);
 
     // Create subscription + invoice
     const subscription = await db.memberSubscription.create({
@@ -63,8 +72,8 @@ export async function POST(request: Request) {
             amountCents: price.amountCents,
             currency: price.currency,
             status: "open",
-            issuedAt: new Date(),
-            dueAt: billingEndsAt,
+            issuedAt: startDate,
+            dueAt,
             planId,
             priceId,
           },
