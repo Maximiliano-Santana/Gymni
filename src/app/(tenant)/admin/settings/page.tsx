@@ -29,6 +29,8 @@ export default async function SettingsPage() {
   const colors = (settings.colors as Record<string, string>) ?? {};
   const layout = (settings.layout as Record<string, Record<string, string>>) ?? {};
   const billing = (settings.billing as Record<string, number>) ?? {};
+  const assets = (settings.assets as Record<string, unknown>) ?? {};
+  const logo = assets.logo as { light?: string; dark?: string } | undefined;
 
   return (
     <div className="space-y-6">
@@ -45,6 +47,8 @@ export default async function SettingsPage() {
           borderRadius: layout.borderRadius?.base ?? "0.5rem",
           graceDays: billing.graceDays ?? 0,
           autoCancelDays: billing.autoCancelDays ?? 0,
+          logoUrl: logo?.light ?? null,
+          faviconUrl: (assets.favicon as string) ?? null,
         }}
       />
     </div>

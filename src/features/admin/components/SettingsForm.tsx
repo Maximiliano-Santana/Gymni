@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { generateTenantCSS } from "@/features/tenants/server/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageIcon, Trash2, Upload, Loader2 } from "lucide-react";
 
 type SettingsData = {
   name: string;
@@ -27,7 +28,134 @@ type SettingsData = {
   borderRadius: string;
   graceDays: number;
   autoCancelDays: number;
+  logoUrl: string | null;
+  faviconUrl: string | null;
 };
+
+async function compressImage(file: File, maxSize: number): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
+      } else {
+        if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob!), "image/png", 0.9);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function BrandingUpload({
+  label,
+  description,
+  imageUrl,
+  onUploaded,
+  onDeleted,
+  type,
+}: {
+  label: string;
+  description: string;
+  imageUrl: string | null;
+  onUploaded: (url: string) => void;
+  onDeleted: () => void;
+  type: "logo" | "favicon";
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const maxSize = type === "favicon" ? 128 : 400;
+      const compressed = await compressImage(file, maxSize);
+      const formData = new FormData();
+      formData.append("file", compressed, file.name);
+      formData.append("type", type);
+      const res = await fetch("/api/tenant/settings/branding", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        onUploaded(data.url);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleDelete() {
+    setUploading(true);
+    try {
+      const res = await fetch("/api/tenant/settings/branding", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      if (res.ok) onDeleted();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <p className="text-xs text-muted-foreground mb-2">{description}</p>
+      <div className="flex items-center gap-4">
+        <div className="size-20 rounded-lg border border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/50">
+          {imageUrl ? (
+            <img src={imageUrl} alt={label} className="max-h-full max-w-full object-contain p-1" />
+          ) : (
+            <ImageIcon className="size-8 text-muted-foreground/50" />
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleUpload}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="size-4 mr-1 animate-spin" /> : <Upload className="size-4 mr-1" />}
+            Subir
+          </Button>
+          {imageUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={uploading}
+            >
+              <Trash2 className="size-4 mr-1" />
+              Eliminar
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ColorField({
   label,
@@ -98,6 +226,8 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [borderRadius, setBorderRadius] = useState(initialData.borderRadius);
   const [graceDays, setGraceDays] = useState(initialData.graceDays);
   const [autoCancelDays, setAutoCancelDays] = useState(initialData.autoCancelDays);
+  const [logoUrl, setLogoUrl] = useState(initialData.logoUrl);
+  const [faviconUrl, setFaviconUrl] = useState(initialData.faviconUrl);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -174,6 +304,30 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
             <Label>Dirección</Label>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Marca</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <BrandingUpload
+            label="Logo"
+            description="Se muestra en el sidebar, login y dashboard. Recomendado: PNG transparente."
+            imageUrl={logoUrl}
+            type="logo"
+            onUploaded={(url) => { setLogoUrl(url); router.refresh(); }}
+            onDeleted={() => { setLogoUrl(null); router.refresh(); }}
+          />
+          <BrandingUpload
+            label="Favicon"
+            description="Icono de la pestaña del navegador. Recomendado: cuadrado, 128×128px."
+            imageUrl={faviconUrl}
+            type="favicon"
+            onUploaded={(url) => { setFaviconUrl(url); router.refresh(); }}
+            onDeleted={() => { setFaviconUrl(null); router.refresh(); }}
+          />
         </CardContent>
       </Card>
 

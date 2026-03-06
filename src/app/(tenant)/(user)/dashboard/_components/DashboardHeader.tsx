@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,6 +25,9 @@ export default function DashboardHeader() {
   const tenant = useTenant();
   const pathname = usePathname();
 
+  const settings = getTenantSettings(tenant);
+  const logoUrl = settings?.assets?.logo?.light;
+
   const name = session?.user?.name ?? "Usuario";
   const initials = name
     .split(" ")
@@ -36,6 +40,9 @@ export default function DashboardHeader() {
     <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <img src={logoUrl} alt={tenant.name} className="h-6 object-contain" />
+          ) : null}
           <Avatar className="size-8">
             <AvatarImage src={session?.user?.image ?? undefined} alt={name} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>

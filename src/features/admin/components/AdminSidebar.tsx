@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
+import { getTenantSettings } from "@/features/tenants/types/settings";
 import { canAccess, type AdminPage } from "@/features/admin/lib/permissions";
 import type { TenantRole } from "@prisma/client";
 
@@ -49,12 +50,21 @@ export default function AdminSidebar({ roles }: { roles: TenantRole[] }) {
 
   const visibleItems = NAV_ITEMS.filter((item) => canAccess(item.page, roles));
 
+  const settings = tenant ? getTenantSettings(tenant) : null;
+  const logoUrl = settings?.mode === "light"
+    ? settings?.assets?.logo?.light
+    : (settings?.assets?.logo?.dark || settings?.assets?.logo?.light);
+
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3">
-        <span className="text-sm font-semibold truncate">
-          {tenant?.name ?? "Admin"}
-        </span>
+        {logoUrl ? (
+          <img src={logoUrl} alt={tenant?.name ?? "Logo"} className="h-8 max-w-full object-contain" />
+        ) : (
+          <span className="text-sm font-semibold truncate">
+            {tenant?.name ?? "Admin"}
+          </span>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
