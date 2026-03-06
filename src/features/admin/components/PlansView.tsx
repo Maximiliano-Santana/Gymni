@@ -260,12 +260,13 @@ export default function PlansView({ initialPlans }: { initialPlans: PlanData[] }
               <Label>Precios (MXN)</Label>
               <div className="grid gap-2">
                 {TIERS.map((tier, i) => (
-                  <div key={`${tier.interval}-${tier.intervalCount}`} className="flex items-center gap-2">
+                  <div key={`${editingPlan?.id}-${tier.interval}-${tier.intervalCount}`} className="flex items-center gap-2">
                     <span className="text-sm w-24">{tier.label}</span>
                     <Input
                       type="number"
                       step="0.01"
-                      value={editPrices[i] ? (editPrices[i].amountCents / 100).toFixed(2) : "0.00"}
+                      defaultValue={editPrices[i]?.amountCents ? (editPrices[i].amountCents / 100) : ""}
+                      placeholder="0.00"
                       onChange={(e) => updateEditPrice(i, e.target.value)}
                     />
                   </div>
