@@ -47,13 +47,18 @@ export async function DELETE(
       return NextResponse.json({ message: "Suscripción no encontrada" }, { status: 404 });
     }
 
-    await db.memberSubscription.delete({ where: { id } });
+    await db.$transaction([
+      db.memberPayment.deleteMany({ where: { invoice: { subscriptionId: id } } }),
+      db.memberInvoice.deleteMany({ where: { subscriptionId: id } }),
+      db.memberSubscription.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json({ message: "Suscripción eliminada" });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
     if (msg === "403_FORBIDDEN")
       return NextResponse.json({ message: "Sin permisos" }, { status: 403 });
-    return NextResponse.json({ message: "Error al eliminar suscripción" }, { status: 400 });
+    console.error("DELETE subscription error:", error);
+    return NextResponse.json({ message: msg || "Error al eliminar suscripción" }, { status: 400 });
   }
 }
