@@ -11,9 +11,20 @@ export const getTenantBySubdomain = cache(async (subdomain: string): Promise<Ten
   return db.tenant.findUnique({ where: { subdomain } });
 });
 
+function extractSubdomainFromHost(host: string | null): string | null {
+  if (!host) return null;
+  const hostname = host.split(":")[0];
+  const parts = hostname.split(".");
+  if (parts.length <= 2) return null;
+  const sub = parts[0];
+  return sub === "www" ? null : sub;
+}
+
 export async function validateTenantSubdomain(): Promise<TenantTyped | null> {
   const headerList = await headers();
-  const subdomain = headerList.get("x-tenant-subdomain");
+  const subdomain =
+    headerList.get("x-tenant-subdomain") ||
+    extractSubdomainFromHost(headerList.get("host"));
 
   // Sin subdomain = dominio raíz = páginas de marketing, no necesita tenant
   if (!subdomain) return null;
