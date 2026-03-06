@@ -62,9 +62,9 @@ export function InstallBanner() {
     /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   return (
-    <div className="fixed top-0 inset-x-0 z-50 bg-primary px-4 py-2.5 text-primary-foreground">
-      <div className="mx-auto max-w-4xl">
-        <div className="flex items-center justify-between gap-3">
+    <div className="fixed top-0 inset-x-0 z-50">
+      <div className="bg-primary px-4 py-2.5 text-primary-foreground">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <p className="text-sm truncate min-w-0">
             Agregar app a pantalla de inicio
           </p>
@@ -84,14 +84,16 @@ export function InstallBanner() {
             </button>
           </div>
         </div>
-        {showTip && (
-          <p className="mt-1.5 text-xs text-primary-foreground/80">
+      </div>
+      {showTip && (
+        <div className="bg-background border-b border-border px-4 py-2">
+          <p className="mx-auto max-w-4xl text-xs text-muted-foreground">
             {isIOS
               ? 'Toca el botón "Compartir" y luego "Agregar a inicio"'
               : 'Abre el menú del navegador (⋮) y selecciona "Instalar aplicación"'}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
