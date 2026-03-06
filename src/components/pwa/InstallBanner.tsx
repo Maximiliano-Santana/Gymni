@@ -8,6 +8,12 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+declare global {
+  interface Window {
+    __pwaPrompt: BeforeInstallPromptEvent | null;
+  }
+}
+
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -20,6 +26,12 @@ export function InstallBanner() {
     // User dismissed before in this session
     if (sessionStorage.getItem("pwa-dismissed")) return;
 
+    // Check if the event was captured early by the inline script
+    if (window.__pwaPrompt) {
+      setDeferredPrompt(window.__pwaPrompt);
+    }
+
+    // Also listen for future events (e.g. after SW update)
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);

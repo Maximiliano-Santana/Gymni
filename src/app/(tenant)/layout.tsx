@@ -72,6 +72,11 @@ export default async function TenantLayout({
     <html lang="en" className={isDark ? "dark" : ""}>
       <head>
         <link rel="stylesheet" href="/api/tenants/theme" precedence="high" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__pwaPrompt=null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pwaPrompt=e});`,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
