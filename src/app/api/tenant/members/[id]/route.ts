@@ -97,6 +97,59 @@ const PatchSchema = z.object({
   regenerateQr: z.boolean().optional(),
 });
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { tenantId } = await requireTenantRoles(["OWNER"]);
+    const { id } = await params;
+
+    const tu = await db.tenantUser.findFirst({
+      where: { id, tenantId },
+      select: { id: true, roles: true },
+    });
+
+    if (!tu) {
+      return NextResponse.json({ message: "Miembro no encontrado" }, { status: 404 });
+    }
+
+    if (tu.roles.includes("OWNER")) {
+      return NextResponse.json({ message: "No se puede eliminar a un owner" }, { status: 400 });
+    }
+
+    await db.$transaction(async (tx) => {
+      // 1. Delete payments (references invoices)
+      await tx.memberPayment.deleteMany({
+        where: { invoice: { subscription: { tenantUserId: id } } },
+      });
+      // 2. Delete invoices (references subscriptions)
+      await tx.memberInvoice.deleteMany({
+        where: { subscription: { tenantUserId: id } },
+      });
+      // 3. Delete subscriptions
+      await tx.memberSubscription.deleteMany({
+        where: { tenantUserId: id },
+      });
+      // 4. Delete check-ins
+      await tx.checkIn.deleteMany({
+        where: { tenantUserId: id },
+      });
+      // 5. Delete the tenant-user record
+      await tx.tenantUser.delete({
+        where: { id },
+      });
+    });
+
+    return NextResponse.json({ message: "Miembro eliminado" });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg === "403_FORBIDDEN")
+      return NextResponse.json({ message: "Sin permisos" }, { status: 403 });
+    return NextResponse.json({ message: "Error al eliminar miembro" }, { status: 400 });
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

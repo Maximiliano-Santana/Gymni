@@ -19,6 +19,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -195,6 +197,11 @@ export default function MemberDetail({
   const [payRef, setPayRef] = useState("");
   const [paying, setPaying] = useState(false);
 
+  // Delete member dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
   const [error, setError] = useState("");
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
@@ -231,6 +238,23 @@ export default function MemberDetail({
       method: "PATCH",
     });
     if (res.ok) router.refresh();
+  }
+
+  async function handleDeleteMember() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tenant/members/${member.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message ?? "Error al eliminar");
+        return;
+      }
+      router.push("/admin/members");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handlePayment() {
@@ -591,6 +615,63 @@ export default function MemberDetail({
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Danger zone — only OWNER */}
+      {userRoles.includes("OWNER") && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-destructive text-sm font-medium">Zona de peligro</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Eliminar miembro del gym</p>
+                <p className="text-sm text-muted-foreground">
+                  Se borrarán sus suscripciones, facturas, pagos y check-ins. Su cuenta de usuario se conserva.
+                </p>
+              </div>
+              <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteConfirmEmail(""); }}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive">Eliminar miembro</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Eliminar miembro</DialogTitle>
+                    <DialogDescription>
+                      Esta acción es irreversible. Se eliminarán todas las suscripciones, facturas, pagos y check-ins de este miembro.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>
+                        Escribe <span className="font-mono font-bold">{member.email}</span> para confirmar
+                      </Label>
+                      <Input
+                        value={deleteConfirmEmail}
+                        onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                        placeholder={member.email}
+                      />
+                    </div>
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteMember}
+                      disabled={deleting || deleteConfirmEmail !== member.email}
+                    >
+                      {deleting ? "Eliminando..." : "Eliminar definitivamente"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
