@@ -34,7 +34,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Camera, RefreshCw, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Camera, Pencil, RefreshCw, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
 import { getTenantSettings } from "@/features/tenants/types/settings";
@@ -62,6 +63,7 @@ type MemberData = {
   status: string;
   joinedAt: string;
   qrToken: string | null;
+  notes: string | null;
   subscription: {
     id: string;
     planName: string;
@@ -131,6 +133,29 @@ export default function MemberDetail({
   const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canManageSub = userRoles.some((r) => r === "OWNER" || r === "ADMIN" || r === "STAFF");
+
+  // Notes state
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState(member.notes ?? "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const canEditNotes = userRoles.some((r) => r === "OWNER" || r === "ADMIN");
+
+  async function handleSaveNotes() {
+    setSavingNotes(true);
+    try {
+      const res = await fetch(`/api/tenant/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notesValue || null }),
+      });
+      if (res.ok) {
+        setEditingNotes(false);
+        router.refresh();
+      }
+    } finally {
+      setSavingNotes(false);
+    }
+  }
 
   // Photo state
   const [uploading, setUploading] = useState(false);
@@ -511,6 +536,54 @@ export default function MemberDetail({
           </CardContent>
         </Card>
       </div>
+
+      {/* Notes card */}
+      {canManageSub && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
+            {canEditNotes && !editingNotes && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setNotesValue(member.notes ?? ""); setEditingNotes(true); }}
+              >
+                <Pencil className="size-3.5 mr-1" />
+                Editar
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingNotes ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Agregar notas sobre el miembro..."
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{notesValue.length}/500</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingNotes(false)} disabled={savingNotes}>
+                      <X className="size-3.5 mr-1" />
+                      Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes}>
+                      {savingNotes ? "Guardando..." : "Guardar"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">
+                {member.notes || <span className="text-muted-foreground">Sin notas</span>}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Payment dialog (shared, opened from subscription rows) */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>

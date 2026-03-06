@@ -1,23 +1,50 @@
 import db from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { localMidnightToUTC } from "@/lib/timezone";
 import type {
   PaymentListItem,
   PaymentMethodFilter,
   PaginatedPayments,
+  PaymentStats,
 } from "../types/payment-list";
 
 const PAGE_SIZE = 20;
+
+function addDateFilter(
+  where: Prisma.MemberPaymentWhereInput,
+  from?: string,
+  to?: string,
+  tz?: string,
+) {
+  if (!from && !to) return;
+  const paidAt: Prisma.DateTimeFilter = {};
+  if (from) paidAt.gte = localMidnightToUTC(from, tz);
+  if (to) {
+    // "to" is inclusive — add 1 day
+    const [y, m, d] = to.split("-").map(Number);
+    const nextDay = new Date(y, m - 1, d + 1);
+    const nextDayStr = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+    paidAt.lt = localMidnightToUTC(nextDayStr, tz);
+  }
+  where.paidAt = paidAt;
+}
 
 export async function queryPayments({
   tenantId,
   search,
   method,
   page = 1,
+  from,
+  to,
+  tz,
 }: {
   tenantId: string;
   search?: string;
   method?: PaymentMethodFilter;
   page?: number;
+  from?: string;
+  to?: string;
+  tz?: string;
 }): Promise<PaginatedPayments> {
   const where: Prisma.MemberPaymentWhereInput = { tenantId };
 
@@ -25,6 +52,9 @@ export async function queryPayments({
   if (method && method !== "all") {
     where.method = method;
   }
+
+  // Date range filter
+  addDateFilter(where, from, to, tz);
 
   // Search filter — name, email, or reference
   if (search) {
@@ -105,5 +135,59 @@ export async function queryPayments({
     page,
     pageSize: PAGE_SIZE,
     totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+  };
+}
+
+export async function queryPaymentStats({
+  tenantId,
+  from,
+  to,
+  tz,
+}: {
+  tenantId: string;
+  from: string;
+  to: string;
+  tz: string;
+}): Promise<PaymentStats> {
+  const fromDate = localMidnightToUTC(from, tz);
+  const [y, m, d] = to.split("-").map(Number);
+  const nextDay = new Date(y, m - 1, d + 1);
+  const nextDayStr = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+  const toDate = localMidnightToUTC(nextDayStr, tz);
+
+  const [byMethod, byDay] = await Promise.all([
+    db.memberPayment.groupBy({
+      by: ["method"],
+      where: {
+        tenantId,
+        voidedAt: null,
+        paidAt: { gte: fromDate, lt: toDate },
+      },
+      _sum: { amountCents: true },
+      orderBy: { _sum: { amountCents: "desc" } },
+    }),
+    db.$queryRaw<{ date: string; totalCents: bigint }[]>`
+      SELECT
+        TO_CHAR("paidAt" AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS "date",
+        SUM("amountCents")::bigint AS "totalCents"
+      FROM "member_payments"
+      WHERE "tenantId" = ${tenantId}
+        AND "voidedAt" IS NULL
+        AND "paidAt" >= ${fromDate}
+        AND "paidAt" < ${toDate}
+      GROUP BY 1
+      ORDER BY 1
+    `,
+  ]);
+
+  return {
+    byMethod: byMethod.map((r) => ({
+      method: r.method,
+      totalCents: r._sum.amountCents ?? 0,
+    })),
+    byDay: byDay.map((r) => ({
+      date: r.date,
+      totalCents: Number(r.totalCents),
+    })),
   };
 }

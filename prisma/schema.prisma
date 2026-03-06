@@ -124,6 +124,7 @@ model TenantUser {
   roles TenantRole[] @default([])
   status TenantUserStatus @default(ACTIVE)
   qrToken String? @unique
+  notes   String?   @db.Text
   memberSubscriptions MemberSubscription[]
   checkIns CheckIn[]
 

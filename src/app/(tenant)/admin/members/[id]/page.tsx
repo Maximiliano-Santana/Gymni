@@ -79,6 +79,7 @@ export default async function MemberDetailPage({
     roles: tu.roles as string[],
     status: tu.status,
     qrToken: tu.qrToken,
+    notes: tu.notes ?? null,
     joinedAt: tu.user.createdAt.toISOString(),
     subscription: activeSub
       ? {

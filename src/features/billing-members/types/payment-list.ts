@@ -23,3 +23,8 @@ export type PaginatedPayments = {
   pageSize: number;
   totalPages: number;
 };
+
+export type PaymentStats = {
+  byMethod: { method: string; totalCents: number }[];
+  byDay: { date: string; totalCents: number }[];
+};

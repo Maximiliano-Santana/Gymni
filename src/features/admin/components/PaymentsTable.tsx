@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import type { PaymentListItem, PaymentMethodFilter } from "@/features/billing-members/types/payment-list";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import type { PaymentListItem, PaymentMethodFilter, PaymentStats } from "@/features/billing-members/types/payment-list";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   Table,
   TableBody,
@@ -38,8 +46,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, Search, MoreHorizontal, Pencil, Ban } from "lucide-react";
-import { useTenant } from "@/features/tenants/providers/tenant-context";
-import { getTenantSettings } from "@/features/tenants/types/settings";
 import { formatTenantDate } from "@/lib/timezone";
 
 const METHOD_LABELS: Record<string, string> = {
@@ -61,6 +67,52 @@ function formatMoney(cents: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(cents / 100);
 }
 
+function getToday(tz: string) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function getMondayOfWeek(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function getMonthStart(dateStr: string) {
+  return dateStr.slice(0, 7) + "-01";
+}
+
+function getLastMonthRange(dateStr: string) {
+  const [y, m] = dateStr.split("-").map(Number);
+  const prevMonth = m === 1 ? 12 : m - 1;
+  const prevYear = m === 1 ? y - 1 : y;
+  const lastDay = new Date(prevYear, prevMonth, 0).getDate();
+  return {
+    from: `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`,
+    to: `${prevYear}-${String(prevMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+type Preset = { label: string; getRange: (today: string) => { from: string; to: string } };
+
+const PRESETS: Preset[] = [
+  { label: "Hoy", getRange: (today) => ({ from: today, to: today }) },
+  { label: "Semana", getRange: (today) => ({ from: getMondayOfWeek(today), to: today }) },
+  { label: "Mes", getRange: (today) => ({ from: getMonthStart(today), to: today }) },
+  { label: "Mes pasado", getRange: (today) => getLastMonthRange(today) },
+];
+
+const chartConfig: ChartConfig = {
+  totalCents: {
+    label: "Ingresos",
+    color: "var(--chart-1)",
+  },
+};
+
 export default function PaymentsTable({
   payments,
   total,
@@ -69,6 +121,10 @@ export default function PaymentsTable({
   totalPages,
   initialSearch,
   initialMethod,
+  initialFrom = "",
+  initialTo = "",
+  stats = null,
+  tz = "America/Mexico_City",
   canManage = false,
 }: {
   payments: PaymentListItem[];
@@ -78,15 +134,19 @@ export default function PaymentsTable({
   totalPages: number;
   initialSearch: string;
   initialMethod: PaymentMethodFilter;
+  initialFrom?: string;
+  initialTo?: string;
+  stats?: PaymentStats | null;
+  tz?: string;
   canManage?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tenant = useTenant();
-  const tz = getTenantSettings(tenant)?.timezone ?? "America/Mexico_City";
 
   const [search, setSearch] = useState(initialSearch);
+  const [fromDate, setFromDate] = useState(initialFrom);
+  const [toDate, setToDate] = useState(initialTo);
 
   // Void dialog state
   const [voidPayment, setVoidPayment] = useState<PaymentListItem | null>(null);
@@ -136,6 +196,37 @@ export default function PaymentsTable({
   function handlePage(newPage: number) {
     router.push(buildUrl({ page: String(newPage) }));
   }
+
+  function handlePreset(preset: Preset) {
+    const today = getToday(tz);
+    const range = preset.getRange(today);
+    setFromDate(range.from);
+    setToDate(range.to);
+    router.push(buildUrl({ from: range.from, to: range.to, page: undefined }));
+  }
+
+  function handleDateApply() {
+    router.push(buildUrl({ from: fromDate || undefined, to: toDate || undefined, page: undefined }));
+  }
+
+  function handleClearDates() {
+    setFromDate("");
+    setToDate("");
+    router.push(buildUrl({ from: undefined, to: undefined, page: undefined }));
+  }
+
+  function activePresetLabel(): string | null {
+    const today = getToday(tz);
+    for (const preset of PRESETS) {
+      const range = preset.getRange(today);
+      if (range.from === initialFrom && range.to === initialTo) return preset.label;
+    }
+    return null;
+  }
+
+  const currentPreset = activePresetLabel();
+  const hasDateFilter = !!initialFrom && !!initialTo;
+  const statsTotalCents = stats?.byMethod.reduce((sum, m) => sum + m.totalCents, 0) ?? 0;
 
   function openEdit(p: PaymentListItem) {
     setEditPayment(p);
@@ -210,6 +301,116 @@ export default function PaymentsTable({
 
   return (
     <div className="space-y-4">
+      {/* Date presets + custom range */}
+      <div className="space-y-3">
+        <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
+          {PRESETS.map((preset) => (
+            <Button
+              key={preset.label}
+              variant={currentPreset === preset.label ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePreset(preset)}
+              className="w-full sm:w-auto"
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
+          <div>
+            <Label className="text-xs text-muted-foreground">Desde</Label>
+            <Input
+              type="date"
+              className="sm:w-36"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Hasta</Label>
+            <Input
+              type="date"
+              className="sm:w-36"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDateApply}
+            disabled={!fromDate || !toDate}
+            className="w-full sm:w-auto"
+          >
+            Aplicar
+          </Button>
+          {hasDateFilter && (
+            <Button variant="ghost" size="sm" onClick={handleClearDates} className="w-full sm:w-auto">
+              Limpiar
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats cards + chart — only when date filter is active */}
+      {hasDateFilter && stats && (
+        <>
+          <div className="grid gap-2 grid-cols-2 sm:gap-3 sm:grid-cols-4">
+            <Card className="py-0">
+              <CardContent className="px-3 py-2 sm:px-4 sm:py-3">
+                <p className="text-[11px] text-muted-foreground sm:text-xs">Total</p>
+                <p className="text-lg font-bold sm:text-2xl">{formatMoney(statsTotalCents)}</p>
+              </CardContent>
+            </Card>
+            {stats.byMethod.map((m) => (
+              <Card key={m.method} className="py-0">
+                <CardContent className="px-3 py-2 sm:px-4 sm:py-3">
+                  <p className="text-[11px] text-muted-foreground sm:text-xs">
+                    {METHOD_LABELS[m.method] ?? m.method}
+                  </p>
+                  <p className="text-lg font-bold sm:text-2xl">{formatMoney(m.totalCents)}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {stats.byDay.length > 1 && (
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Ingresos diarios</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                  <BarChart data={stats.byDay.map((d) => ({ ...d, totalCents: d.totalCents / 100 }))}>
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v: string) => {
+                        const [, m, d] = v.split("-");
+                        return `${parseInt(d)}/${parseInt(m)}`;
+                      }}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      tickFormatter={(v: number) => `$${v.toLocaleString()}`}
+                      tick={{ fontSize: 12 }}
+                      width={70}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value) => formatMoney(Number(value) * 100)}
+                        />
+                      }
+                    />
+                    <Bar dataKey="totalCents" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -223,7 +424,7 @@ export default function PaymentsTable({
         </div>
         <div className="flex items-center gap-3">
           <Select value={initialMethod} onValueChange={handleMethodChange}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-36 sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -242,17 +443,17 @@ export default function PaymentsTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Miembro</TableHead>
-              <TableHead>Plan</TableHead>
-              <TableHead>Monto</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead>Referencia</TableHead>
-              <TableHead>Registrado por</TableHead>
+              <TableHead className="whitespace-nowrap">Fecha</TableHead>
+              <TableHead className="whitespace-nowrap">Miembro</TableHead>
+              <TableHead className="whitespace-nowrap">Plan</TableHead>
+              <TableHead className="whitespace-nowrap">Monto</TableHead>
+              <TableHead className="whitespace-nowrap">Método</TableHead>
+              <TableHead className="whitespace-nowrap">Referencia</TableHead>
+              <TableHead className="whitespace-nowrap">Registrado por</TableHead>
               {canManage && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
@@ -268,12 +469,12 @@ export default function PaymentsTable({
                 const isVoided = !!p.voidedAt;
                 return (
                   <TableRow key={p.id} className={isVoided ? "opacity-50" : ""}>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {formatTenantDate(p.paidAt, tz)}
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{p.memberName ?? "—"}</p>
+                        <p className="font-medium whitespace-nowrap">{p.memberName ?? "—"}</p>
                         <p className="text-xs text-muted-foreground">{p.memberEmail}</p>
                       </div>
                     </TableCell>
@@ -295,11 +496,11 @@ export default function PaymentsTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{METHOD_LABELS[p.method] ?? p.method}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="whitespace-nowrap">{METHOD_LABELS[p.method] ?? p.method}</TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
                       {p.reference ?? "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
                       {p.receivedBy ?? "—"}
                     </TableCell>
                     {canManage && (

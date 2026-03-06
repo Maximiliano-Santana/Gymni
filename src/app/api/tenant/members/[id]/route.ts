@@ -66,6 +66,7 @@ export async function GET(
       roles: tu.roles,
       status: tu.status,
       qrToken: tu.qrToken,
+      notes: tu.notes ?? null,
       joinedAt: tu.user.createdAt.toISOString(),
       subscription: activeSub
         ? {
@@ -110,6 +111,7 @@ export async function GET(
 const PatchSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   regenerateQr: z.boolean().optional(),
+  notes: z.string().max(500).optional().nullable(),
 });
 
 export async function DELETE(
@@ -169,6 +171,7 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
     if (parsed.data.status) updateData.status = parsed.data.status;
     if (parsed.data.regenerateQr) updateData.qrToken = generateQrToken();
+    if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
 
     const updated = await db.tenantUser.update({
       where: { id },
