@@ -316,7 +316,7 @@ model MemberSubscription {
   tenantId        String
   tenant          Tenant  @relation(fields: [tenantId], references: [id])
   tenantUserId    String
-  tenantUser      TenantUser @relation(fields: [tenantUserId], references: [id])
+  tenantUser      TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
   planId          String
   plan            MembershipPlan @relation(fields: [planId], references: [id])
   priceId         String
@@ -339,7 +339,7 @@ model MemberInvoice {
   tenantId         String
   tenant           Tenant  @relation(fields: [tenantId], references: [id])
   subscriptionId   String
-  subscription     MemberSubscription @relation(fields: [subscriptionId], references: [id])
+  subscription     MemberSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   amountCents      Int
   currency         String  @default("MXN")
   status           InvoiceStatus @default(open)
@@ -362,7 +362,7 @@ model MemberPayment {
   tenantId    String
   tenant      Tenant  @relation(fields: [tenantId], references: [id])
   invoiceId   String
-  invoice     MemberInvoice @relation(fields: [invoiceId], references: [id])
+  invoice     MemberInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   method      PaymentMethod
   amountCents Int
   paidAt      DateTime
@@ -385,7 +385,7 @@ model CheckIn {
   tenantId     String
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
   tenantUserId String
-  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id])
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
   checkedInAt  DateTime @default(now())
   checkedInBy  String?  // userId of staff who confirmed
 

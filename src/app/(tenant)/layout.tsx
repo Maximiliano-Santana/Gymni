@@ -1,10 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Providers } from "../providers";
 import { headers } from "next/headers";
 import { getTenantBySubdomain, validateTenantSubdomain } from "@/features/tenants/lib";
 import { getTenantSettings } from "@/features/tenants/types/settings";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

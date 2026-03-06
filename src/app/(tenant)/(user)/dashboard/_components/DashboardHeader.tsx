@@ -12,12 +12,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut } from "lucide-react";
+import { LogOut, Home, QrCode } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/dashboard", label: "Inicio" },
-  { href: "/dashboard/qr", label: "Mi QR" },
+  { href: "/dashboard", label: "Inicio", icon: Home },
+  { href: "/dashboard/qr", label: "Mi QR", icon: QrCode },
 ] as const;
 
 export default function DashboardHeader() {
@@ -29,67 +29,116 @@ export default function DashboardHeader() {
   const logoUrl = settings?.assets?.logo?.light;
 
   const name = session?.user?.name ?? "Usuario";
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+
+  const handleSignOut = () =>
+    signOut({ callbackUrl: `${window.location.origin}/login` });
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3">
-          {logoUrl ? (
-            <img src={logoUrl} alt={tenant.name} className="h-6 object-contain" />
-          ) : null}
-          <Avatar className="size-8">
-            <AvatarImage src={session?.user?.image ?? undefined} alt={name} />
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-sm font-semibold text-foreground leading-none">
-              {name}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {tenant.name}
-            </p>
-          </div>
+    <>
+      {/* Desktop header */}
+      <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 hidden md:flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={tenant.name}
+                className="h-6 object-contain"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-foreground">
+                {tenant.name}
+              </span>
+            )}
+          </Link>
+
+          <nav className="flex items-center gap-1">
+            {NAV_LINKS.map((link) => {
+              const active = pathname === link.href;
+              return (
+                <Link key={link.href} href={link.href}>
+                  <Button
+                    variant={active ? "secondary" : "ghost"}
+                    size="sm"
+                    className="text-sm"
+                  >
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        <nav className="flex items-center gap-1">
-          {NAV_LINKS.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link key={link.href} href={link.href}>
-                <Button
-                  variant={active ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-sm"
-                >
-                  {link.label}
-                </Button>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              {name}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 size-4" />
+              Cerrar sesión
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            Cerrar sesión
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 inset-x-0 z-10 border-t bg-card md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        <div className="flex items-end justify-around px-4 pb-2 pt-1">
+          {/* Inicio */}
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex flex-col items-center gap-0.5 py-1 min-w-[64px]",
+              pathname === "/dashboard"
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
           >
-            <LogOut className="mr-2 size-4" />
-            Cerrar sesión
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </header>
+            <Home className="size-5" />
+            <span className="text-[11px] font-medium">Inicio</span>
+          </Link>
+
+          {/* QR — center prominent */}
+          <Link
+            href="/dashboard/qr"
+            className="flex flex-col items-center -mt-5"
+          >
+            <div
+              className={cn(
+                "size-14 rounded-full flex items-center justify-center shadow-lg",
+                pathname === "/dashboard/qr"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-primary/90 text-primary-foreground"
+              )}
+            >
+              <QrCode className="size-7" />
+            </div>
+            <span
+              className={cn(
+                "text-[11px] font-medium mt-0.5",
+                pathname === "/dashboard/qr"
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              )}
+            >
+              Mi QR
+            </span>
+          </Link>
+
+          {/* Cerrar sesión */}
+          <button
+            onClick={handleSignOut}
+            className="flex flex-col items-center gap-0.5 py-1 min-w-[64px] text-muted-foreground"
+          >
+            <LogOut className="size-5" />
+            <span className="text-[11px] font-medium">Salir</span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

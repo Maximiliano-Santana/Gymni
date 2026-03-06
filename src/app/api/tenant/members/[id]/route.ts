@@ -118,28 +118,7 @@ export async function DELETE(
       return NextResponse.json({ message: "No se puede eliminar a un owner" }, { status: 400 });
     }
 
-    await db.$transaction(async (tx) => {
-      // 1. Delete payments (references invoices)
-      await tx.memberPayment.deleteMany({
-        where: { invoice: { subscription: { tenantUserId: id } } },
-      });
-      // 2. Delete invoices (references subscriptions)
-      await tx.memberInvoice.deleteMany({
-        where: { subscription: { tenantUserId: id } },
-      });
-      // 3. Delete subscriptions
-      await tx.memberSubscription.deleteMany({
-        where: { tenantUserId: id },
-      });
-      // 4. Delete check-ins
-      await tx.checkIn.deleteMany({
-        where: { tenantUserId: id },
-      });
-      // 5. Delete the tenant-user record
-      await tx.tenantUser.delete({
-        where: { id },
-      });
-    });
+    await db.tenantUser.delete({ where: { id } });
 
     return NextResponse.json({ message: "Miembro eliminado" });
   } catch (error: unknown) {

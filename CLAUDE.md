@@ -44,7 +44,9 @@ npx prisma generate                   # Regenerate client after schema changes
 
 The core of the app. `src/middleware.ts` reads the `Host` header, extracts the subdomain, and forwards it as `x-tenant-subdomain` on every request. In development, any request to `localhost` gets mapped to `"dev-gym"` automatically.
 
-The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain()` to resolve the tenant from DB, then passes it to `<Providers>` which wraps `<SessionProvider>` and `<TenantProvider>`. Theming is injected via `<link rel="stylesheet" href="/api/tenants/theme">` in the layout `<head>`.
+**Subdomain resolution in server components**: Use `getSubdomain()` from `@/features/tenants/lib` — NEVER read `x-tenant-subdomain` header directly. This helper reads the middleware header with a fallback to parsing the standard `host` header, because Vercel Edge Runtime doesn't guarantee custom middleware headers reach server components.
+
+The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain()` (which uses `getSubdomain()` internally) to resolve the tenant from DB, then passes it to `<Providers>` which wraps `<SessionProvider>` and `<TenantProvider>`. Theming is injected via `<link rel="stylesheet" href="/api/tenants/theme">` in the layout `<head>`.
 
 ### Route Protection (Middleware)
 
@@ -78,6 +80,8 @@ Admin routes use **server component layouts** for role checks (no client-side fl
 
 Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with semantic tokens, gray scale, and chart colors (`src/features/tenants/server/theme.ts`). The endpoint also accepts `?tenant=<subdomain>` to force a specific tenant's theme. Caching uses ETag with `must-revalidate` — changes apply immediately.
 
+**Branding**: Tenants can upload a logo and favicon via Admin → Settings → "Marca". Upload endpoint at `POST/DELETE /api/tenant/settings/branding` (FormData with `file` + `type`). Logo displays in AdminSidebar, login page, and member dashboard header. Favicon is set in the tenant layout metadata. Images stored via Vercel Blob (prod) or `public/uploads/` (dev).
+
 **Live theme preview**: The settings form (`SettingsForm.tsx`) imports `generateTenantCSS()` on the client and injects a `<style>` tag on every change, so theme edits are visible instantly without saving. Color fields for success/warning include preset buttons.
 
 `globals.css` maps all CSS variables to Tailwind tokens via `@theme inline`, so Tailwind classes like `bg-primary` and `text-foreground` automatically reflect the tenant's theme.
@@ -97,7 +101,7 @@ Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green)
 
 ### Auth (NextAuth v4, JWT strategy)
 
-Config at `src/app/api/auth/[...nextauth]/route.ts`. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
+Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-exported by `src/app/api/auth/[...nextauth]/route.ts`. NextAuth route files can only export HTTP handlers — never put `authOptions` or other non-handler exports in route files. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
 
 **Google OAuth** is configured with automatic account linking. The `signIn` callback:
 1. Links Google accounts to existing users with the same email.

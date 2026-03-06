@@ -38,8 +38,9 @@ export default async function middleware(req: NextRequest) {
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   ) return NextResponse.next();
 
-  // 1) Tenancy SIEMPRE
-  const sub = computeSubdomain(req.nextUrl.hostname);
+  // 1) Tenancy SIEMPRE — prefer Host header (req.nextUrl.hostname can lose subdomain)
+  const hostHeader = req.headers.get("host") ?? req.nextUrl.hostname;
+  const sub = computeSubdomain(hostHeader);
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-tenant-subdomain", sub || '');
