@@ -35,10 +35,11 @@ type PlanData = {
   prices: PriceData[];
 };
 
-// The 3 fixed tiers we support in the UI
 const TIERS = [
   { interval: "MONTH", intervalCount: 1, label: "Mensual" },
   { interval: "MONTH", intervalCount: 3, label: "Trimestral" },
+  { interval: "MONTH", intervalCount: 4, label: "Cuatrimestral" },
+  { interval: "MONTH", intervalCount: 6, label: "Semestral" },
   { interval: "YEAR", intervalCount: 1, label: "Anual" },
 ] as const;
 
@@ -50,6 +51,8 @@ function intervalLabel(interval: string, count: number) {
   if (interval === "YEAR") return count === 1 ? "Anual" : `${count} años`;
   if (count === 1) return "Mensual";
   if (count === 3) return "Trimestral";
+  if (count === 4) return "Cuatrimestral";
+  if (count === 6) return "Semestral";
   return `${count} meses`;
 }
 
@@ -67,11 +70,9 @@ export default function PlansView({ initialPlans }: { initialPlans: PlanData[] }
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [prices, setPrices] = useState([
-    { interval: "MONTH", intervalCount: 1, amountCents: 0 },
-    { interval: "MONTH", intervalCount: 3, amountCents: 0 },
-    { interval: "YEAR", intervalCount: 1, amountCents: 0 },
-  ]);
+  const [prices, setPrices] = useState(
+    TIERS.map((t) => ({ interval: t.interval, intervalCount: t.intervalCount, amountCents: 0 }))
+  );
 
   // Edit dialog
   const [editingPlan, setEditingPlan] = useState<PlanData | null>(null);
@@ -140,11 +141,7 @@ export default function PlansView({ initialPlans }: { initialPlans: PlanData[] }
       setCode("");
       setName("");
       setDescription("");
-      setPrices([
-        { interval: "MONTH", intervalCount: 1, amountCents: 0 },
-        { interval: "MONTH", intervalCount: 3, amountCents: 0 },
-        { interval: "YEAR", intervalCount: 1, amountCents: 0 },
-      ]);
+      setPrices(TIERS.map((t) => ({ interval: t.interval, intervalCount: t.intervalCount, amountCents: 0 })));
       router.refresh();
     } finally {
       setCreating(false);
