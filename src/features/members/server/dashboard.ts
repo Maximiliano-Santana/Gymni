@@ -48,7 +48,7 @@ function computeStreaks(checkIns: { checkedInAt: Date }[], timezone: string) {
 
   // If latest check-in is yesterday, start from yesterday
   if (!cursor) {
-    const yesterday = new Date(today);
+    const yesterday = toDate(todayStr);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
     if (uniqueDays[0] === yesterdayStr) {
