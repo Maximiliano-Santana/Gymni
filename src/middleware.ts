@@ -74,4 +74,4 @@ export default async function middleware(req: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
-export const config = { matcher: ["/:path*"] };
+export const config = { matcher: ["/", "/:path*"] };
