@@ -57,7 +57,13 @@ export default async function middleware(req: NextRequest) {
 
   // 2) Rutas que no corresponden al dominio actual
   if (!sub && isTenantOnly(pathname)) {
-    return NextResponse.redirect(new URL("/app", req.url));
+    // DEBUG: temporal — ver qué recibe el middleware
+    const debugUrl = new URL("/app", req.url);
+    debugUrl.searchParams.set("_dbg_nextUrlHostname", req.nextUrl.hostname);
+    debugUrl.searchParams.set("_dbg_host", req.headers.get("host") || "null");
+    debugUrl.searchParams.set("_dbg_xfh", req.headers.get("x-forwarded-host") || "null");
+    debugUrl.searchParams.set("_dbg_url", req.url.slice(0, 120));
+    return NextResponse.redirect(debugUrl);
   }
   if (sub && isPlatformOnly(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
