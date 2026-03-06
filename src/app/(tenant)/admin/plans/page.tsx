@@ -22,7 +22,6 @@ export default async function PlansPage() {
     where: { tenantId },
     include: {
       prices: {
-        where: { isActive: true },
         orderBy: [{ interval: "asc" }, { intervalCount: "asc" }],
       },
       _count: { select: { subscriptions: { where: { status: "ACTIVE" } } } },
@@ -43,6 +42,7 @@ export default async function PlansPage() {
       intervalCount: pr.intervalCount,
       amountCents: pr.amountCents,
       currency: pr.currency,
+      isActive: pr.isActive,
     })),
   }));
 

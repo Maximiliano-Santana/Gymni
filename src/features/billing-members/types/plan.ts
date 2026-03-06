@@ -27,6 +27,17 @@ export const UpdateMembershipPlanSchema = z.object({
   name: z.string().min(1).max(60).optional(),
   description: z.string().max(200).optional(),
   isActive: z.boolean().optional(),
+  prices: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        interval: z.nativeEnum(BillingInterval),
+        intervalCount: z.number().int().min(1).max(12),
+        amountCents: z.number().int().min(0),
+        currency: z.string().default("MXN"),
+      })
+    )
+    .optional(),
 });
 
 export type UpdateMembershipPlanDTO = z.infer<typeof UpdateMembershipPlanSchema>;
