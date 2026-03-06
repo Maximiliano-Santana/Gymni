@@ -8,7 +8,15 @@ export async function GET(request: NextRequest) {
   try {
     // Query param ?tenant= permite forzar un tenant (útil para theme preview)
     const tenantParam = request.nextUrl.searchParams.get('tenant');
-    const tenantSubdomain = tenantParam || request.headers.get('x-tenant-subdomain');
+    const headerSub = request.headers.get('x-tenant-subdomain');
+    const hostSub = (() => {
+      const host = request.headers.get('host')?.split(':')[0];
+      if (!host) return null;
+      const parts = host.split('.');
+      if (parts.length <= 2) return null;
+      return parts[0] === 'www' ? null : parts[0];
+    })();
+    const tenantSubdomain = tenantParam || headerSub || hostSub;
 
     // Caso 1: Desarrollo o sin tenant (landing page)
     if (!tenantSubdomain || tenantSubdomain === 'localhost') {
