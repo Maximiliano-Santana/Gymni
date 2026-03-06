@@ -19,17 +19,15 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // QR endpoint — network first, cache fallback (offline QR)
+  // QR API — network first, cache fallback (offline QR data)
   if (url.pathname === "/api/tenant/me/qr") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Dashboard pages — network first, cache fallback (offline shell)
+  if (request.mode === "navigate" && url.pathname.startsWith("/dashboard")) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
@@ -51,3 +49,13 @@ self.addEventListener("fetch", (event) => {
 
   // Everything else — network only
 });
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      return response;
+    })
+    .catch(() => caches.match(request));
+}
