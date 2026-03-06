@@ -701,7 +701,7 @@ export default function MemberDetail({
             <CardTitle className="text-destructive text-sm font-medium">Zona de peligro</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium">Eliminar miembro del gym</p>
                 <p className="text-sm text-muted-foreground">
@@ -710,7 +710,7 @@ export default function MemberDetail({
               </div>
               <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteConfirmEmail(""); }}>
                 <DialogTrigger asChild>
-                  <Button variant="destructive">Eliminar miembro</Button>
+                  <Button variant="destructive" className="w-full sm:w-auto">Eliminar miembro</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
