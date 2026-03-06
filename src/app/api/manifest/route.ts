@@ -48,11 +48,12 @@ export async function GET(request: NextRequest) {
     theme_color: themeColor,
     background_color: backgroundColor,
     icons: [
-      {
-        src: iconUrl,
-        sizes: "any",
-        type: "image/png",
-      },
+      ...(iconUrl.endsWith(".svg")
+        ? [{ src: iconUrl, sizes: "any", type: "image/svg+xml" }]
+        : [
+            { src: iconUrl, sizes: "192x192", type: "image/png" },
+            { src: iconUrl, sizes: "512x512", type: "image/png" },
+          ]),
     ],
     shortcuts: [
       {
