@@ -12,7 +12,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { getMemberDashboardData } from "@/features/members/server/dashboard";
 import { AttendanceChart } from "./_components/charts";
-import MemberQrCode from "./_components/MemberQrCode";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
@@ -217,56 +216,49 @@ export default async function MemberDashboard() {
         </CardContent>
       </Card>
 
-      {/* Recent check-ins + QR */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-base font-semibold text-foreground">
-            Check-ins recientes
-          </h2>
-          <Card>
-            {data.recentCheckIns.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 px-6 py-3 border-b bg-muted/40 rounded-t-xl">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Fecha
-                  </p>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">
-                    Hora
-                  </p>
-                </div>
-                <CardContent className="p-0">
-                  {data.recentCheckIns.map((ci, i) => (
-                    <div key={ci.id}>
-                      <div className="grid grid-cols-2 items-center px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                          <p className="text-sm text-foreground">
-                            {formatDate(ci.checkedInAt)}
-                          </p>
-                        </div>
-                        <p className="text-sm text-muted-foreground text-right">
-                          {formatTime(ci.checkedInAt)}
+      {/* Recent check-ins */}
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-foreground">
+          Check-ins recientes
+        </h2>
+        <Card>
+          {data.recentCheckIns.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 px-6 py-3 border-b bg-muted/40 rounded-t-xl">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Fecha
+                </p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">
+                  Hora
+                </p>
+              </div>
+              <CardContent className="p-0">
+                {data.recentCheckIns.map((ci, i) => (
+                  <div key={ci.id}>
+                    <div className="grid grid-cols-2 items-center px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                        <p className="text-sm text-foreground">
+                          {formatDate(ci.checkedInAt)}
                         </p>
                       </div>
-                      {i < data.recentCheckIns.length - 1 && <Separator />}
+                      <p className="text-sm text-muted-foreground text-right">
+                        {formatTime(ci.checkedInAt)}
+                      </p>
                     </div>
-                  ))}
-                </CardContent>
-              </>
-            ) : (
-              <CardContent className="py-8">
-                <p className="text-sm text-muted-foreground text-center">
-                  Aún no tienes check-ins registrados
-                </p>
+                    {i < data.recentCheckIns.length - 1 && <Separator />}
+                  </div>
+                ))}
               </CardContent>
-            )}
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-base font-semibold text-foreground">Mi QR</h2>
-          <MemberQrCode size="sm" />
-        </div>
+            </>
+          ) : (
+            <CardContent className="py-8">
+              <p className="text-sm text-muted-foreground text-center">
+                Aún no tienes check-ins registrados
+              </p>
+            </CardContent>
+          )}
+        </Card>
       </div>
     </div>
   );
