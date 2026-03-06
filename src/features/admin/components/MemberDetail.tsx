@@ -203,6 +203,7 @@ export default function MemberDetail({
   const [payMethod, setPayMethod] = useState("CASH");
   const [payAmount, setPayAmount] = useState("");
   const [payRef, setPayRef] = useState("");
+  const [payDate, setPayDate] = useState("");
   const [paying, setPaying] = useState(false);
 
   // Delete subscription state
@@ -290,6 +291,7 @@ export default function MemberDetail({
           invoiceId: payInvoiceId,
           method: payMethod,
           amountCents: Math.round(parseFloat(payAmount) * 100),
+          ...(payDate && { paidAt: payDate }),
           reference: payRef || undefined,
         }),
       });
@@ -301,6 +303,7 @@ export default function MemberDetail({
       setPayOpen(false);
       setPayAmount("");
       setPayRef("");
+      setPayDate("");
       router.refresh();
     } finally {
       setPaying(false);
@@ -516,6 +519,11 @@ export default function MemberDetail({
             <div>
               <Label>Monto (MXN)</Label>
               <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="499.00" />
+            </div>
+            <div>
+              <Label>Fecha de pago (opcional)</Label>
+              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">Si no se indica, se usa la fecha de hoy</p>
             </div>
             <div>
               <Label>Referencia (opcional)</Label>
