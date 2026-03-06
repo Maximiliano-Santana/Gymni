@@ -15,68 +15,82 @@ declare global {
 }
 
 export function InstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
-    // Already installed (standalone mode)
+    // Already installed
     if (window.matchMedia("(display-mode: standalone)").matches) return;
 
-    // User dismissed before in this session
+    // Dismissed this session
     if (sessionStorage.getItem("pwa-dismissed")) return;
 
-    // Check if the event was captured early by the inline script
-    if (window.__pwaPrompt) {
-      setDeferredPrompt(window.__pwaPrompt);
-    }
+    setVisible(true);
 
-    // Also listen for future events (e.g. after SW update)
+    // Grab early-captured prompt
+    if (window.__pwaPrompt) setPrompt(window.__pwaPrompt);
+
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setPrompt(e as BeforeInstallPromptEvent);
     };
-
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  if (!deferredPrompt || dismissed) return null;
+  if (!visible) return null;
 
   const handleInstall = async () => {
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setDeferredPrompt(null);
+    if (prompt) {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === "accepted") setVisible(false);
+    } else {
+      // No native prompt available — show manual instructions
+      setShowTip(true);
     }
   };
 
   const handleDismiss = () => {
-    setDismissed(true);
+    setVisible(false);
     sessionStorage.setItem("pwa-dismissed", "1");
   };
 
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   return (
     <div className="fixed top-0 inset-x-0 z-50 bg-primary px-4 py-2.5 text-primary-foreground">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-        <p className="text-sm truncate min-w-0">
-          Agregar app a pantalla de inicio
-        </p>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleInstall}
-            className="rounded-md bg-primary-foreground/20 px-3 py-1 text-sm font-medium hover:bg-primary-foreground/30 transition-colors"
-          >
-            Agregar
-          </button>
-          <button
-            onClick={handleDismiss}
-            className="rounded-md p-1 hover:bg-primary-foreground/20 transition-colors"
-            aria-label="Cerrar"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <div className="mx-auto max-w-4xl">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm truncate min-w-0">
+            Agregar app a pantalla de inicio
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleInstall}
+              className="rounded-md bg-primary-foreground/20 px-3 py-1 text-sm font-medium hover:bg-primary-foreground/30 transition-colors"
+            >
+              Agregar
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="rounded-md p-1 hover:bg-primary-foreground/20 transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
+        {showTip && (
+          <p className="mt-1.5 text-xs text-primary-foreground/80">
+            {isIOS
+              ? 'Toca el botón "Compartir" y luego "Agregar a inicio"'
+              : 'Abre el menú del navegador (⋮) y selecciona "Instalar aplicación"'}
+          </p>
+        )}
       </div>
     </div>
   );
