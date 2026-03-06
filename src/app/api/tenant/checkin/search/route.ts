@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       where: { id: tenantId },
       select: { settings: true },
     });
-    const tz = (tenant?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+    const tz = (tenant?.settings as unknown as TenantSettings)?.timezone ?? "America/Mexico_City";
     const { start: todayStart, end: todayEnd } = getDayBoundsUTC(tz);
 
     const checkIns = await db.checkIn.findMany({

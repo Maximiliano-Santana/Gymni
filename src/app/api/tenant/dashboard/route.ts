@@ -12,7 +12,7 @@ export async function GET() {
       where: { id: tenantId },
       select: { settings: true },
     });
-    const tz = (tenantData?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+    const tz = (tenantData?.settings as unknown as TenantSettings)?.timezone ?? "America/Mexico_City";
 
     const now = new Date();
     const nowStr = todayInTimezone(tz);

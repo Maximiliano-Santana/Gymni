@@ -65,7 +65,7 @@ export default async function MemberDashboard() {
     where: { id: tenantInfo.tenantId },
     select: { settings: true },
   });
-  const tz = (tenantRecord?.settings as TenantSettings)?.timezone ?? "America/Mexico_City";
+  const tz = (tenantRecord?.settings as unknown as TenantSettings)?.timezone ?? "America/Mexico_City";
 
   const data = await getMemberDashboardData(
     session.user.id,
