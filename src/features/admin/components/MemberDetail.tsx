@@ -426,6 +426,7 @@ export default function MemberDetail({
                           <Label>Fecha de inicio (opcional)</Label>
                           <Input
                             type="date"
+                            className="max-w-full"
                             value={billingStartDate}
                             onChange={(e) => setBillingStartDate(e.target.value)}
                           />
@@ -523,7 +524,7 @@ export default function MemberDetail({
             </div>
             <div>
               <Label>Fecha de pago (opcional)</Label>
-              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+              <Input type="date" className="max-w-full" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
               <p className="text-xs text-muted-foreground mt-1">Si no se indica, se usa la fecha de hoy</p>
             </div>
             <div>
