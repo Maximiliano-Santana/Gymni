@@ -38,10 +38,8 @@ export default async function middleware(req: NextRequest) {
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   ) return NextResponse.next();
 
-  // 1) Tenancy SIEMPRE (x-forwarded-host es más confiable en Vercel Edge)
-  const sub = computeSubdomain(
-    req.headers.get("x-forwarded-host") || req.headers.get("host") || ""
-  );
+  // 1) Tenancy SIEMPRE (req.nextUrl.hostname es la fuente más confiable)
+  const sub = computeSubdomain(req.nextUrl.hostname);
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-tenant-subdomain", sub || '');
