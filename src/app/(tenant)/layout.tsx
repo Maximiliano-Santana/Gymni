@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { getTenantBySubdomain, validateTenantSubdomain } from "@/features/tenants/lib";
 import { getTenantSettings } from "@/features/tenants/types/settings";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
 
 export async function generateViewport(): Promise<Viewport> {
   const h = await headers();
@@ -75,6 +76,7 @@ export default async function TenantLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <InstallBanner />
         <Providers tenant={tenant}>{children}</Providers>
         <ServiceWorkerRegistration />
       </body>
