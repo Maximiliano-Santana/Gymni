@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   const manifest = {
     name,
     short_name: name,
-    start_url: "/dashboard",
+    start_url: "/",
     display: "standalone" as const,
     theme_color: themeColor,
     background_color: backgroundColor,
