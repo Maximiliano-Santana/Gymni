@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { ArrowLeft, Camera, CircleDollarSign, Pencil, RefreshCw, Repeat, Trash2, X, XCircle } from "lucide-react";
+import { ArrowLeft, Ban, Camera, CircleDollarSign, Pencil, RefreshCw, Repeat, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
 import { getTenantSettings } from "@/features/tenants/types/settings";
@@ -246,6 +246,10 @@ export default function MemberDetail({
   const [payDate, setPayDate] = useState("");
   const [paying, setPaying] = useState(false);
 
+  // Cancel subscription confirmation state
+  const [cancelSubOpen, setCancelSubOpen] = useState(false);
+  const [cancelingSub, setCancelingSub] = useState(false);
+
   // Delete subscription state
   const [deleteSubId, setDeleteSubId] = useState<string | null>(null);
 
@@ -287,10 +291,18 @@ export default function MemberDetail({
 
   async function handleCancelSub() {
     if (!member.subscription) return;
-    const res = await fetch(`/api/tenant/subscriptions/${member.subscription.id}`, {
-      method: "PATCH",
-    });
-    if (res.ok) router.refresh();
+    setCancelingSub(true);
+    try {
+      const res = await fetch(`/api/tenant/subscriptions/${member.subscription.id}`, {
+        method: "PATCH",
+      });
+      if (res.ok) {
+        setCancelSubOpen(false);
+        router.refresh();
+      }
+    } finally {
+      setCancelingSub(false);
+    }
   }
 
   async function handleDeleteSub(subId: string) {
@@ -419,137 +431,139 @@ export default function MemberDetail({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-start justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">Suscripción</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            {member.subscription ? (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <p><span className="text-muted-foreground">Plan:</span> {member.subscription.planName}</p>
-                  <p>
-                    <span className="text-muted-foreground">Estado:</span>{" "}
-                    <Badge variant={member.subscription.status === "ACTIVE" ? "default" : "destructive"}>
-                      {SUB_STATUS_LABELS[member.subscription.status] ?? member.subscription.status}
-                    </Badge>
-                  </p>
-                  <p><span className="text-muted-foreground">Vence:</span> {formatTenantDate(member.subscription.billingEndsAt, tz)}</p>
+            {canManageSub && member.subscription && (
+              <TooltipProvider>
+                <div className="flex gap-1.5">
                   {(() => {
                     const activeSub = member.subscriptions.find((s) => s.id === member.subscription!.id);
                     if (!activeSub?.openInvoice || activeSub.openInvoice.balanceCents <= 0) return null;
                     return (
-                      <p className="text-destructive font-medium">
-                        Debe {formatMoney(activeSub.openInvoice.balanceCents, activeSub.openInvoice.currency)}
-                      </p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            className="size-9 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => {
+                              setPayInvoiceId(activeSub.openInvoice!.id);
+                              setPayBalanceCents(activeSub.openInvoice!.balanceCents);
+                              setPayOpen(true);
+                            }}
+                          >
+                            <CircleDollarSign className="size-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Registrar pago</TooltipContent>
+                      </Tooltip>
                     );
                   })()}
-                </div>
-                {canManageSub && (
-                  <TooltipProvider>
-                    <div className="flex gap-1">
-                      {(() => {
-                        const activeSub = member.subscriptions.find((s) => s.id === member.subscription!.id);
-                        if (!activeSub?.openInvoice || activeSub.openInvoice.balanceCents <= 0) return null;
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="size-8"
-                                onClick={() => {
-                                  setPayInvoiceId(activeSub.openInvoice!.id);
-                                  setPayBalanceCents(activeSub.openInvoice!.balanceCents);
-                                  setPayOpen(true);
-                                }}
-                              >
-                                <CircleDollarSign className="size-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Registrar pago</TooltipContent>
-                          </Tooltip>
-                        );
-                      })()}
-                      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DialogTrigger asChild>
-                              <Button size="icon" variant="outline" className="size-8">
-                                <Repeat className="size-4" />
-                              </Button>
-                            </DialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>Cambiar plan</TooltipContent>
-                        </Tooltip>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Asignar plan</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label>Plan</Label>
-                              <Select value={selectedPlanId} onValueChange={(v) => { setSelectedPlanId(v); setSelectedPriceId(""); }}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar plan" /></SelectTrigger>
-                                <SelectContent>
-                                  {plans.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {selectedPlan && (
-                              <div>
-                                <Label>Precio</Label>
-                                <Select value={selectedPriceId} onValueChange={setSelectedPriceId}>
-                                  <SelectTrigger><SelectValue placeholder="Seleccionar precio" /></SelectTrigger>
-                                  <SelectContent>
-                                    {selectedPlan.prices.map((pr) => (
-                                      <SelectItem key={pr.id} value={pr.id}>
-                                        {intervalLabel(pr.interval, pr.intervalCount)} — {formatMoney(pr.amountCents, pr.currency)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-                            {selectedPriceId && (
-                              <div>
-                                <Label>Fecha de inicio (opcional)</Label>
-                                <Input
-                                  type="date"
-                                  className="max-w-full"
-                                  value={billingStartDate}
-                                  onChange={(e) => setBillingStartDate(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Si el miembro ya pagó antes de registrarse
-                                </p>
-                              </div>
-                            )}
-                            {error && <p className="text-sm text-destructive">{error}</p>}
-                            <Button
-                              onClick={handleAssignPlan}
-                              disabled={assigning || !selectedPlanId || !selectedPriceId}
-                              className="w-full"
-                            >
-                              {assigning ? "Asignando..." : "Asignar"}
-                            </Button>
+                  <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DialogTrigger asChild>
+                          <Button size="icon" variant="secondary" className="size-9">
+                            <Repeat className="size-5" />
+                          </Button>
+                        </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Cambiar plan</TooltipContent>
+                    </Tooltip>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Asignar plan</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Plan</Label>
+                          <Select value={selectedPlanId} onValueChange={(v) => { setSelectedPlanId(v); setSelectedPriceId(""); }}>
+                            <SelectTrigger><SelectValue placeholder="Seleccionar plan" /></SelectTrigger>
+                            <SelectContent>
+                              {plans.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedPlan && (
+                          <div>
+                            <Label>Precio</Label>
+                            <Select value={selectedPriceId} onValueChange={setSelectedPriceId}>
+                              <SelectTrigger><SelectValue placeholder="Seleccionar precio" /></SelectTrigger>
+                              <SelectContent>
+                                {selectedPlan.prices.map((pr) => (
+                                  <SelectItem key={pr.id} value={pr.id}>
+                                    {intervalLabel(pr.interval, pr.intervalCount)} — {formatMoney(pr.amountCents, pr.currency)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                      {member.subscription.status !== "CANCELED" && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="icon" variant="ghost" className="size-8 text-destructive hover:text-destructive" onClick={handleCancelSub}>
-                              <XCircle className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Cancelar suscripción</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </TooltipProvider>
-                )}
+                        )}
+                        {selectedPriceId && (
+                          <div>
+                            <Label>Fecha de inicio (opcional)</Label>
+                            <Input
+                              type="date"
+                              className="max-w-full"
+                              value={billingStartDate}
+                              onChange={(e) => setBillingStartDate(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Si el miembro ya pagó antes de registrarse
+                            </p>
+                          </div>
+                        )}
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        <Button
+                          onClick={handleAssignPlan}
+                          disabled={assigning || !selectedPlanId || !selectedPriceId}
+                          className="w-full"
+                        >
+                          {assigning ? "Asignando..." : "Asignar"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  {member.subscription.status !== "CANCELED" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="size-9"
+                          onClick={() => setCancelSubOpen(true)}
+                        >
+                          <Ban className="size-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Cancelar suscripción</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </TooltipProvider>
+            )}
+          </CardHeader>
+          <CardContent className="text-sm">
+            {member.subscription ? (
+              <div className="space-y-1">
+                <p><span className="text-muted-foreground">Plan:</span> {member.subscription.planName}</p>
+                <p>
+                  <span className="text-muted-foreground">Estado:</span>{" "}
+                  <Badge variant={member.subscription.status === "ACTIVE" ? "default" : "destructive"}>
+                    {SUB_STATUS_LABELS[member.subscription.status] ?? member.subscription.status}
+                  </Badge>
+                </p>
+                <p><span className="text-muted-foreground">Vence:</span> {formatTenantDate(member.subscription.billingEndsAt, tz)}</p>
+                {(() => {
+                  const activeSub = member.subscriptions.find((s) => s.id === member.subscription!.id);
+                  if (!activeSub?.openInvoice || activeSub.openInvoice.balanceCents <= 0) return null;
+                  return (
+                    <p className="text-destructive font-medium">
+                      Debe {formatMoney(activeSub.openInvoice.balanceCents, activeSub.openInvoice.currency)}
+                    </p>
+                  );
+                })()}
               </div>
             ) : (
               <div className="space-y-3">
@@ -735,6 +749,24 @@ export default function MemberDetail({
               {paying ? "Registrando..." : "Registrar pago"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel subscription confirmation dialog */}
+      <Dialog open={cancelSubOpen} onOpenChange={setCancelSubOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar suscripción</DialogTitle>
+            <DialogDescription>
+              Se cancelará la suscripción activa de {member.name ?? member.email}. El miembro ya no tendrá acceso.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelSubOpen(false)}>Volver</Button>
+            <Button variant="destructive" onClick={handleCancelSub} disabled={cancelingSub}>
+              {cancelingSub ? "Cancelando..." : "Cancelar suscripción"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
