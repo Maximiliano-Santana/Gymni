@@ -181,6 +181,15 @@ export const authOptions: NextAuthOptions = {
         token.tenants = await getTenantsBySubdomain(user.id);
       }
 
+      // Backfill emailVerified for JWTs created before the verification feature
+      if (token.emailVerified === undefined && token.sub) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.sub },
+          select: { emailVerified: true },
+        });
+        token.emailVerified = !!dbUser?.emailVerified;
+      }
+
       // Allow client-side refresh: useSession().update({ refreshTenants: true })
       if (trigger === "update" && (session as any)?.refreshTenants) {
         const userId = token.sub!;
