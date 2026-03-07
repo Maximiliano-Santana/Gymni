@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
             name: true,
             password: true,
             systemRole: true,
+            emailVerified: true,
           },
         });
         if (!user) return null;
@@ -51,6 +52,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name ?? null,
           systemRole: user.systemRole ?? "USER",
+          emailVerified: !!user.emailVerified,
         } as any;
       },
     }),
@@ -95,6 +97,14 @@ export const authOptions: NextAuthOptions = {
                 ? String(account.session_state)
                 : null,
             },
+          });
+        }
+
+        // Google-verified email — mark as verified if not already
+        if (!existingUser.emailVerified) {
+          await db.user.update({
+            where: { id: existingUser.id },
+            data: { emailVerified: new Date() },
           });
         }
 
@@ -157,13 +167,15 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.systemRole = (user as any).systemRole ?? undefined;
+        token.emailVerified = (user as any).emailVerified ?? false;
         // For Google users, systemRole won't be on the user object — look it up
         if (!token.systemRole) {
           const dbUser = await db.user.findUnique({
             where: { id: user.id },
-            select: { systemRole: true },
+            select: { systemRole: true, emailVerified: true },
           });
           token.systemRole = dbUser?.systemRole ?? "USER";
+          token.emailVerified = !!dbUser?.emailVerified;
         }
         token.picture = user.image ?? undefined;
         token.tenants = await getTenantsBySubdomain(user.id);
@@ -179,6 +191,15 @@ export const authOptions: NextAuthOptions = {
           select: { image: true },
         });
         token.picture = dbUser?.image ?? undefined;
+      }
+
+      // Allow client-side refresh after email verification
+      if (trigger === "update" && (session as any)?.refreshEmailVerified) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.sub! },
+          select: { emailVerified: true },
+        });
+        token.emailVerified = !!dbUser?.emailVerified;
       }
       return token;
     },
@@ -209,6 +230,7 @@ export const authOptions: NextAuthOptions = {
         session.user.image = (token.picture as string) ?? null;
         session.user.systemRole = token.systemRole ?? "USER";
         session.user.tenants = token.tenants ?? {};
+        session.user.emailVerified = token.emailVerified ?? false;
       }
       return session;
     },

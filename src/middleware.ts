@@ -71,6 +71,10 @@ export default async function middleware(req: NextRequest) {
       const url = new URL("/login", req.url);
       return NextResponse.redirect(url);
     }
+    // Email verification gate (skip API routes — they're programmatic)
+    if (!token.emailVerified && !pathname.startsWith("/api/")) {
+      return NextResponse.redirect(new URL("/verify-email", req.url));
+    }
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });

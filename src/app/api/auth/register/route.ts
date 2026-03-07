@@ -3,9 +3,35 @@ import { validateRequest } from "@/app/api/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { TenantRole } from "@prisma/client";
 import { sendEmail } from "@/lib/email";
 import WelcomeEmail from "@/emails/WelcomeEmail";
+import VerifyEmail from "@/emails/VerifyEmail";
+
+async function sendVerificationEmail(email: string, origin: string) {
+  // Delete previous verification tokens
+  await db.verificationToken.deleteMany({
+    where: { identifier: `verify:${email}` },
+  });
+
+  const verifyToken = crypto.randomUUID();
+  await db.verificationToken.create({
+    data: {
+      identifier: `verify:${email}`,
+      token: verifyToken,
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
+
+  const verifyUrl = `${origin}/verify-email?token=${verifyToken}&email=${encodeURIComponent(email)}`;
+
+  await sendEmail({
+    to: email,
+    subject: "Verifica tu correo — Gymni",
+    react: VerifyEmail({ verifyUrl }),
+  });
+}
 
 export async function POST(request: NextRequest) {
   //Validación de datos
@@ -79,6 +105,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const origin = request.headers.get("origin") || request.nextUrl.origin;
+
   //Si usuario no existe se crea
   if (!user) {
     user = await db.user.create({
@@ -86,11 +114,14 @@ export async function POST(request: NextRequest) {
         name: newUser.name,
         email: newUser.email,
         password: await bcrypt.hash(newUser.password, 10),
+        // Invitation/admin-created users are auto-verified
+        emailVerified: invitation ? new Date() : null,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        emailVerified: true,
         createdAt: true,
       },
     });
@@ -99,6 +130,10 @@ export async function POST(request: NextRequest) {
 
   //Si solo es registro global se retorna respuesta
   if (user && !tenant && !invitation) {
+    // Send verification email for self-register
+    if (!user.emailVerified) {
+      await sendVerificationEmail(newUser.email, origin);
+    }
     return NextResponse.json(
       { message: "Usuario en Gym&i creado correctamente." },
       { status: 200 }
@@ -107,6 +142,14 @@ export async function POST(request: NextRequest) {
 
   //Si hay invitacion crea/actualiza relacion
   if (invitation) {
+    // Auto-verify existing user if registering via invitation
+    if (!user.emailVerified) {
+      await db.user.update({
+        where: { id: user.id },
+        data: { emailVerified: new Date() },
+      });
+    }
+
     //Validacion de relación
     const tenantUser = await db.tenantUser.findUnique({
       where: {
@@ -204,6 +247,12 @@ export async function POST(request: NextRequest) {
         data: { roles: { set: mergedRoles } },
       });
     }
+
+    // Send verification email if not verified
+    if (!user.emailVerified) {
+      await sendVerificationEmail(newUser.email, origin);
+    }
+
     // Send welcome email
     sendEmail({
       to: newUser.email,
@@ -222,4 +271,3 @@ export async function POST(request: NextRequest) {
     { status: 400 }
   );
 }
-

@@ -77,6 +77,7 @@ async function main() {
       name: "Admin Dev",
       email: "admin@gmail.com",
       password: hashedPassword,
+      emailVerified: new Date(),
     },
   });
   await db.tenantUser.upsert({
@@ -106,6 +107,7 @@ async function main() {
       name: "Admin Green",
       email: "green@gmail.com",
       password: hashedPassword,
+      emailVerified: new Date(),
     },
   });
   await db.tenantUser.upsert({
@@ -250,7 +252,7 @@ async function main() {
     const user = await db.user.upsert({
       where: { email: m.email },
       update: { password: hashedPassword },
-      create: { name: m.name, email: m.email, password: hashedPassword },
+      create: { name: m.name, email: m.email, password: hashedPassword, emailVerified: new Date() },
     });
     const tu = await db.tenantUser.upsert({
       where: {
@@ -431,7 +433,7 @@ async function main() {
     const user = await db.user.upsert({
       where: { email },
       update: { password: hashedPassword },
-      create: { name: bulkNames[i], email, password: hashedPassword },
+      create: { name: bulkNames[i], email, password: hashedPassword, emailVerified: new Date() },
     });
     const tu = await db.tenantUser.upsert({
       where: { userId_tenantId: { userId: user.id, tenantId: devGym.id } },

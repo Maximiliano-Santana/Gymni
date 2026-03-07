@@ -50,8 +50,9 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 
 ### Route Protection (Middleware)
 
-`src/middleware.ts` enforces four layers of protection:
+`src/middleware.ts` enforces five layers of protection:
 - **`isProtected`** — `/dashboard`, `/admin`, `/app`, `/api/protected` require authentication (redirects to `/login`).
+- **Email verification gate** — Protected routes (except `/api/`) require `emailVerified` on the JWT. Unverified users are redirected to `/verify-email`.
 - **`isTenantOnly`** — `/dashboard`, `/admin` are blocked on the root domain (redirects to `/app`).
 - **`isPlatformOnly`** — `/app` is blocked on tenant subdomains (redirects to `/dashboard`).
 - **Subdomain root** — `/` on a tenant subdomain redirects based on role: staff (OWNER/ADMIN/STAFF) → `/admin`, members → `/dashboard`, unauthenticated → `/login`. No marketing page on subdomains.
@@ -122,14 +123,24 @@ Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"Amer
 
 Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-exported by `src/app/api/auth/[...nextauth]/route.ts`. NextAuth route files can only export HTTP handlers — never put `authOptions` or other non-handler exports in route files. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
 
+**Email verification** (`src/app/api/auth/verify-email/route.ts`):
+- Self-registered users start with `emailVerified: null` → blocked from protected routes until verified.
+- Verification email is Gymni-branded (not tenant-branded) — it's a platform-level identity check.
+- Uses `VerificationToken` model with `identifier: "verify:<email>"` prefix to avoid collision with password reset tokens.
+- JWT includes `emailVerified: boolean` — refreshable via `update({ refreshEmailVerified: true })`.
+- **Auto-verified** (skip verification): invitation register, admin-added members, Google OAuth.
+- Verify-email page at `src/app/(tenant)/(auth)/verify-email/page.tsx` handles both waiting state and token consumption.
+- **Production deploy**: Run `UPDATE users SET "emailVerified" = NOW() WHERE "emailVerified" IS NULL;` on Neon BEFORE deploying to avoid locking out existing users.
+
 **Google OAuth** is configured with automatic account linking. The `signIn` callback:
 1. Links Google accounts to existing users with the same email.
-2. Auto-detects pending invitations when logging in from a tenant subdomain.
-3. Creates `TenantUser` with the invitation's role (or MEMBER if no invitation).
-4. Marks the invitation as used.
+2. Auto-verifies email if the linked user had `emailVerified: null`.
+3. Auto-detects pending invitations when logging in from a tenant subdomain.
+4. Creates `TenantUser` with the invitation's role (or MEMBER if no invitation).
+5. Marks the invitation as used.
 
 **Invitation system** (`POST /api/auth/invitation`):
-- If invitee already has an account → directly adds/updates TenantUser with the role.
+- If invitee already has an account → directly adds/updates TenantUser with the role + auto-verifies email if null.
 - If invitee doesn't exist → creates an `Invitation` record (30-day expiry). Registration with `?invitation=<id>` in the URL consumes it.
 - The invitation token acts as a security measure — knowing the email alone isn't enough to claim a role.
 

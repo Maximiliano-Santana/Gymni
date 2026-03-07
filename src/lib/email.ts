@@ -24,10 +24,18 @@ export async function sendEmail({
     return;
   }
 
-  return resend.emails.send({
+  const result = await resend.emails.send({
     from: process.env.EMAIL_FROM ?? "Gymni <noreply@gymni.app>",
     to,
     subject,
     react,
   });
+
+  if (result.error) {
+    console.error(`[email] Resend error to ${to}:`, result.error);
+    throw new Error(result.error.message);
+  }
+
+  console.log(`[email] Sent to ${to}: "${subject}" (id: ${result.data?.id})`);
+  return result;
 }

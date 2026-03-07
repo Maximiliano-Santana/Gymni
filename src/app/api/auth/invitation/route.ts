@@ -45,6 +45,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (user) {
+      // Auto-verify email if admin is adding this user
+      if (!user.emailVerified) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { emailVerified: new Date() },
+        });
+      }
+
       const existing = await db.tenantUser.findUnique({
         where: {
           userId_tenantId: {

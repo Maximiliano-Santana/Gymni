@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     if (!user) {
       tempPassword = `Gym-${crypto.randomUUID().slice(0, 8)}`;
       user = await db.user.create({
-        data: { email, name, password: await bcrypt.hash(tempPassword, 10) },
+        data: { email, name, password: await bcrypt.hash(tempPassword, 10), emailVerified: new Date() },
       });
     }
 

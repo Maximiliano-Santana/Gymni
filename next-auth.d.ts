@@ -13,6 +13,7 @@ declare module "next-auth" {
       image?: string | null;
       systemRole: "USER" | "SUPER_ADMIN";
       tenants?: TenantsMap;
+      emailVerified?: boolean;
     };
   }
 
@@ -21,6 +22,7 @@ declare module "next-auth" {
     email: string;
     name?: string | null;
     systemRole?: "USER" | "SUPER_ADMIN";
+    emailVerified?: boolean;
   }
 }
 
@@ -29,5 +31,6 @@ declare module "next-auth/jwt" {
     sub?: string;
     systemRole?: "USER" | "SUPER_ADMIN";
     tenants?: TenantsMap;
+    emailVerified?: boolean;
   }
 }
