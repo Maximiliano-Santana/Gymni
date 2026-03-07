@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -403,7 +402,7 @@ export default function MemberDetail({
       </div>
 
       {/* Info + Subscription + QR Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Información</CardTitle>
@@ -621,20 +620,6 @@ export default function MemberDetail({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">QR de acceso</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            {member.qrToken ? (
-              <div className="rounded-lg bg-white p-2">
-                <QRCodeSVG value={member.qrToken} size={120} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-4">Sin QR asignado</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Notes card */}
