@@ -7,7 +7,7 @@ export default function MemberDashboardLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <DashboardHeader />
       <main>{children}</main>
     </div>

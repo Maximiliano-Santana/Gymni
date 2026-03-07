@@ -24,7 +24,7 @@ export default function AdminHeader() {
     .toUpperCase();
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b px-4">
+    <header className="flex min-h-14 items-center gap-3 border-b px-4" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
       <div className="flex-1" />

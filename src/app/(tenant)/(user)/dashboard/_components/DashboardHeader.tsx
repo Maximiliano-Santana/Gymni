@@ -36,7 +36,7 @@ export default function DashboardHeader() {
   return (
     <>
       {/* Desktop header */}
-      <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 hidden md:flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b bg-card px-6 py-3 hidden md:flex items-center justify-between" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0.75rem))" }}>
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
             {logoUrl ? (
