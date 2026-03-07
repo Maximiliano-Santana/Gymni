@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -319,20 +320,20 @@ export default function PaymentsTable({
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
           <div>
             <Label className="text-xs text-muted-foreground">Desde</Label>
-            <Input
-              type="date"
-              className="sm:w-36"
+            <DatePicker
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+              onChange={(v) => setFromDate(v)}
+              placeholder="Desde"
+              className="sm:w-36"
             />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Hasta</Label>
-            <Input
-              type="date"
-              className="sm:w-36"
+            <DatePicker
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+              onChange={(v) => setToDate(v)}
+              placeholder="Hasta"
+              className="sm:w-36"
             />
           </div>
           <Button
@@ -636,11 +637,9 @@ export default function PaymentsTable({
             </div>
             <div>
               <Label>Fecha de pago</Label>
-              <Input
-                type="date"
-                className="max-w-full"
+              <DatePicker
                 value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
+                onChange={(v) => setEditDate(v)}
               />
             </div>
             <div>

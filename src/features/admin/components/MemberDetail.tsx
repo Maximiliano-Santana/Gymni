@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ArrowLeft, Ban, Camera, CircleDollarSign, Pencil, Repeat, Trash2, X } from "lucide-react";
@@ -486,11 +487,10 @@ export default function MemberDetail({
                         {selectedPriceId && (
                           <div>
                             <Label>Fecha de inicio (opcional)</Label>
-                            <Input
-                              type="date"
-                              className="max-w-full"
+                            <DatePicker
                               value={billingStartDate}
-                              onChange={(e) => setBillingStartDate(e.target.value)}
+                              onChange={(v) => setBillingStartDate(v)}
+                              placeholder="Seleccionar fecha"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
                               Si el miembro ya pagó antes de registrarse
@@ -592,11 +592,10 @@ export default function MemberDetail({
                         {selectedPriceId && (
                           <div>
                             <Label>Fecha de inicio (opcional)</Label>
-                            <Input
-                              type="date"
-                              className="max-w-full"
+                            <DatePicker
                               value={billingStartDate}
-                              onChange={(e) => setBillingStartDate(e.target.value)}
+                              onChange={(v) => setBillingStartDate(v)}
+                              placeholder="Seleccionar fecha"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
                               Si el miembro ya pagó antes de registrarse
@@ -695,7 +694,7 @@ export default function MemberDetail({
             </div>
             <div>
               <Label>Fecha de pago (opcional)</Label>
-              <Input type="date" className="max-w-full" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+              <DatePicker value={payDate} onChange={(v) => setPayDate(v)} placeholder="Seleccionar fecha" />
               <p className="text-xs text-muted-foreground mt-1">Si no se indica, se usa la fecha de hoy</p>
             </div>
             <div>

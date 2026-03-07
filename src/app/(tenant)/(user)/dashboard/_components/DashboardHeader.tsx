@@ -12,8 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Home, QrCode } from "lucide-react";
+import { LogOut, Home, QrCode, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isStaffRole } from "@/features/auth/lib";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Inicio", icon: Home },
@@ -29,6 +30,8 @@ export default function DashboardHeader() {
   const logoUrl = settings?.assets?.logo?.light;
 
   const name = session?.user?.name ?? "Usuario";
+  const roles = session?.user?.tenants?.[tenant.subdomain]?.roles ?? [];
+  const isStaff = isStaffRole(roles);
 
   const handleSignOut = () =>
     signOut({ callbackUrl: `${window.location.origin}/login` });
@@ -77,10 +80,19 @@ export default function DashboardHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 size-4" />
-              Cerrar sesión
-            </DropdownMenuItem>
+            {isStaff ? (
+              <DropdownMenuItem asChild>
+                <Link href="/admin">
+                  <Shield className="mr-2 size-4" />
+                  Admin
+                </Link>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 size-4" />
+                Cerrar sesión
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
@@ -129,14 +141,24 @@ export default function DashboardHeader() {
             </span>
           </Link>
 
-          {/* Cerrar sesión */}
-          <button
-            onClick={handleSignOut}
-            className="flex flex-col items-center gap-0.5 py-1 min-w-[64px] text-muted-foreground"
-          >
-            <LogOut className="size-5" />
-            <span className="text-[11px] font-medium">Salir</span>
-          </button>
+          {/* Admin o Salir */}
+          {isStaff ? (
+            <Link
+              href="/admin"
+              className="flex flex-col items-center gap-0.5 py-1 min-w-[64px] text-muted-foreground"
+            >
+              <Shield className="size-5" />
+              <span className="text-[11px] font-medium">Admin</span>
+            </Link>
+          ) : (
+            <button
+              onClick={handleSignOut}
+              className="flex flex-col items-center gap-0.5 py-1 min-w-[64px] text-muted-foreground"
+            >
+              <LogOut className="size-5" />
+              <span className="text-[11px] font-medium">Salir</span>
+            </button>
+          )}
         </div>
       </nav>
     </>

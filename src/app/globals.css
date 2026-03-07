@@ -72,20 +72,6 @@
     @apply bg-background text-foreground;
   }
 
-  /* Fix native date inputs overflowing on mobile */
-  input[type="date"] {
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    margin: 0;
-    padding: 0;
-  }
-
-  input[type="date"]::-webkit-date-and-time-value {
-    text-align: left;
-  }
 }
 
 @layer utilities {
