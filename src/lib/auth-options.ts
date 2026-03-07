@@ -181,7 +181,7 @@ export const authOptions: NextAuthOptions = {
         token.tenants = await getTenantsBySubdomain(user.id);
       }
 
-      // Backfill emailVerified for JWTs created before the verification feature
+      // TODO: Remove after 2026-04-07 — backfill for JWTs created before email verification (deployed 2026-03-07)
       if (token.emailVerified === undefined && token.sub) {
         const dbUser = await db.user.findUnique({
           where: { id: token.sub },

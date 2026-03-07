@@ -14,9 +14,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LayoutDashboard, LogOut } from "lucide-react";
 import Link from "next/link";
+import { useTenant } from "@/features/tenants/providers/TenantContext";
 
 export default function AdminHeader() {
   const { data: session } = useSession();
+  const tenant = useTenant();
+  const roles = session?.user?.tenants?.[tenant.subdomain]?.roles ?? [];
+  const isMember = roles.includes("MEMBER");
   const name = session?.user?.name ?? "U";
   const initials = name
     .split(" ")
@@ -40,13 +44,17 @@ export default function AdminHeader() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard">
-              <LayoutDashboard className="mr-2 size-4" />
-              Mi panel
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
+          {isMember && (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard">
+                  <LayoutDashboard className="mr-2 size-4" />
+                  Mi panel
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}>
             <LogOut className="mr-2 size-4" />
             Cerrar sesión

@@ -21,5 +21,8 @@ export default async function TenantMemberLayout({
   const tenantInfo = session.user.tenants?.[sub];
   if (!tenantInfo) redirect("/login");
 
+  const isMember = tenantInfo.roles?.includes("MEMBER");
+  if (!isMember) redirect("/admin");
+
   return <>{children}</>;
 }
