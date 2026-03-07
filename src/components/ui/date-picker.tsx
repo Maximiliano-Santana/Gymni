@@ -70,6 +70,7 @@ export function DatePicker({
       onSelect={handleSelect}
       locale={es}
       defaultMonth={date}
+      fixedWeeks
     />
   )
 

@@ -490,8 +490,7 @@ export default function MemberDetail({
                             <DatePicker
                               value={billingStartDate}
                               onChange={(v) => setBillingStartDate(v)}
-                              placeholder="Seleccionar fecha"
-                            />
+                                                         />
                             <p className="text-xs text-muted-foreground mt-1">
                               Si el miembro ya pagó antes de registrarse
                             </p>
@@ -595,8 +594,7 @@ export default function MemberDetail({
                             <DatePicker
                               value={billingStartDate}
                               onChange={(v) => setBillingStartDate(v)}
-                              placeholder="Seleccionar fecha"
-                            />
+                                                         />
                             <p className="text-xs text-muted-foreground mt-1">
                               Si el miembro ya pagó antes de registrarse
                             </p>
