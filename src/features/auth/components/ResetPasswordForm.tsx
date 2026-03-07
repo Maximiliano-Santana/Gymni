@@ -61,8 +61,8 @@ export default function ResetPasswordForm() {
 
   if (!token || !email) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-center text-red-500">
+      <div className="space-y-4">
+        <p className="text-sm text-destructive">
           El enlace es inválido o ha expirado.
         </p>
         <Link
@@ -77,8 +77,8 @@ export default function ResetPasswordForm() {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-center text-muted-foreground">
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
           Tu contraseña fue actualizada correctamente.
         </p>
         <Link
@@ -92,11 +92,8 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col items-center gap-4"
-    >
-      <div className="w-46">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
         <Label>Nueva contraseña</Label>
         <PasswordInput
           placeholder="******"
@@ -105,7 +102,8 @@ export default function ResetPasswordForm() {
           required
         />
       </div>
-      <div className="w-46">
+
+      <div className="space-y-2">
         <Label>Confirmar contraseña</Label>
         <PasswordInput
           placeholder="******"
@@ -114,10 +112,12 @@ export default function ResetPasswordForm() {
           required
         />
       </div>
-      <Button type="submit" disabled={loading}>
+
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Guardando..." : "Restablecer contraseña"}
       </Button>
-      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+      {error && <p className="text-sm text-destructive text-center">{error}</p>}
     </form>
   );
 }

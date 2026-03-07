@@ -77,80 +77,81 @@ export default function RegisterForm({
       setSubmitting(false);
     }
   }
+
   return (
-    <>
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex justify-center items-center flex-col"
-        >
-          <div className="w-46 flex flex-col items-center gap-4">
-            <div>
-              <Label>Nombre</Label>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field, fieldState }) => (
-                  <>
-                    <Input type="text" placeholder="John Doe" {...field} />
-                    {fieldState.error && (
-                      <span className="text-red-500">
-                        {fieldState.error.message}
-                      </span>
-                    )}
-                  </>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-4"
+      >
+        <div className="space-y-2">
+          <Label>Nombre</Label>
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <>
+                <Input type="text" placeholder="Tu nombre completo" {...field} />
+                {fieldState.error && (
+                  <span className="text-sm text-destructive">
+                    {fieldState.error.message}
+                  </span>
                 )}
-              />
-            </div>
-            <div>
-              <Label>Correo</Label>
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field, fieldState }) => (
-                  <>
-                    <Input
-                      type="text"
-                      placeholder="email@mail.com"
-                      {...field}
-                    />
-                    {fieldState.error && (
-                      <span className="text-red-500">
-                        {fieldState.error.message}
-                      </span>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-            <div>
-              <Label>Contraseña</Label>
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field, fieldState }) => (
-                  <>
-                    <PasswordInput placeholder="******" {...field} />
-                    {fieldState.error && (
-                      <span className="text-red-500">
-                        {fieldState.error.message}
-                      </span>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-            <Button variant="default" type="submit" disabled={submitting}>
-              {submitting ? "Registrando..." : "Registrarse"}
-            </Button>
-            {form.formState.errors.root?.message && (
-              <p className="text-sm text-red-500">
-                {form.formState.errors.root.message}
-              </p>
+              </>
             )}
-          </div>
-        </form>
-      </Form>
-    </>
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Correo</Label>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field, fieldState }) => (
+              <>
+                <Input
+                  type="text"
+                  placeholder="email@mail.com"
+                  {...field}
+                />
+                {fieldState.error && (
+                  <span className="text-sm text-destructive">
+                    {fieldState.error.message}
+                  </span>
+                )}
+              </>
+            )}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Contraseña</Label>
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field, fieldState }) => (
+              <>
+                <PasswordInput placeholder="******" {...field} />
+                {fieldState.error && (
+                  <span className="text-sm text-destructive">
+                    {fieldState.error.message}
+                  </span>
+                )}
+              </>
+            )}
+          />
+        </div>
+
+        <Button variant="default" type="submit" className="w-full" disabled={submitting}>
+          {submitting ? "Registrando..." : "Crear cuenta"}
+        </Button>
+
+        {form.formState.errors.root?.message && (
+          <p className="text-sm text-destructive text-center">
+            {form.formState.errors.root.message}
+          </p>
+        )}
+      </form>
+    </Form>
   );
 }

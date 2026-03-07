@@ -40,8 +40,8 @@ export default function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-center text-muted-foreground">
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
           Si tu correo está registrado, recibirás un enlace para restablecer tu
           contraseña.
         </p>
@@ -56,11 +56,8 @@ export default function ForgotPasswordForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col items-center gap-4"
-    >
-      <div className="w-46">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
         <Label>Correo</Label>
         <Input
           type="email"
@@ -70,16 +67,21 @@ export default function ForgotPasswordForm() {
           required
         />
       </div>
-      <Button type="submit" disabled={loading}>
+
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Enviando..." : "Enviar enlace"}
       </Button>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      <Link
-        href="/login"
-        className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-      >
-        Volver al login
-      </Link>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <p className="text-center">
+        <Link
+          href="/login"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Volver al login
+        </Link>
+      </p>
     </form>
   );
 }
