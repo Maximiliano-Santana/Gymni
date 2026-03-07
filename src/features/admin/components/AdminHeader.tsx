@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LayoutDashboard, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useTenant } from "@/features/tenants/providers/TenantContext";
+import { useTenant } from "@/features/tenants/providers/tenant-context";
 
 export default function AdminHeader() {
   const { data: session } = useSession();
