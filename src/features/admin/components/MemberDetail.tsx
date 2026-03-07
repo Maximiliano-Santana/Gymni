@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { ArrowLeft, Ban, Camera, CircleDollarSign, Pencil, RefreshCw, Repeat, Trash2, X } from "lucide-react";
+import { ArrowLeft, Ban, Camera, CircleDollarSign, Pencil, Repeat, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useTenant } from "@/features/tenants/providers/tenant-context";
 import { getTenantSettings } from "@/features/tenants/types/settings";
@@ -160,8 +160,6 @@ export default function MemberDetail({
 
   // Photo state
   const [uploading, setUploading] = useState(false);
-  const [regeneratingQr, setRegeneratingQr] = useState(false);
-
   async function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve) => {
       const img = new Image();
@@ -212,20 +210,6 @@ export default function MemberDetail({
       if (res.ok) router.refresh();
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function handleRegenerateQr() {
-    setRegeneratingQr(true);
-    try {
-      const res = await fetch(`/api/tenant/members/${member.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regenerateQr: true }),
-      });
-      if (res.ok) router.refresh();
-    } finally {
-      setRegeneratingQr(false);
     }
   }
 
@@ -638,19 +622,8 @@ export default function MemberDetail({
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">QR de acceso</CardTitle>
-            {canManageSub && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleRegenerateQr}
-                disabled={regeneratingQr}
-              >
-                <RefreshCw className={`size-3.5 mr-1 ${regeneratingQr ? "animate-spin" : ""}`} />
-                Regenerar
-              </Button>
-            )}
           </CardHeader>
           <CardContent className="flex justify-center">
             {member.qrToken ? (
