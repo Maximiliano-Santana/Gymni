@@ -41,9 +41,9 @@ export async function POST(request: Request) {
       data: { status: "CANCELED", canceledAt: new Date() },
     });
 
-    // Calculate billing end date (use UTC to avoid timezone day-shift)
+    // Calculate billing end date — use noon UTC to avoid timezone day-shift
     const startDate = billingStartDate
-      ? new Date(billingStartDate + "T00:00:00Z")
+      ? new Date(billingStartDate + "T12:00:00Z")
       : new Date();
     const billingEndsAt = new Date(startDate);
     if (price.interval === "YEAR") {
