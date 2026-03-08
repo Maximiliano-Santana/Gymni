@@ -81,7 +81,7 @@ Admin routes use **server component layouts** for role checks (no client-side fl
 
 Tenants store a `TenantSettings` JSON blob in `tenant.settings` (see `src/features/tenants/types/settings.ts`). The route `GET /api/tenants/theme` reads this blob, merges it with `DEFAULT_TENANT_SETTINGS`, and generates a complete CSS `:root { ... }` block with semantic tokens, gray scale, and chart colors (`src/features/tenants/server/theme.ts`). The endpoint also accepts `?tenant=<subdomain>` to force a specific tenant's theme. Caching uses ETag with `must-revalidate` — changes apply immediately.
 
-**Branding**: Tenants can upload a logo and favicon via Admin → Settings → "Marca". Upload endpoint at `POST/DELETE /api/tenant/settings/branding` (FormData with `file` + `type`). Logo displays in AdminSidebar, login page, and member dashboard header. Favicon is set in the tenant layout metadata. Images stored via Vercel Blob (prod) or `public/uploads/` (dev).
+**Branding**: Tenants can upload a logo and favicon via Admin → Settings → Marca tab. Upload endpoint at `POST/DELETE /api/tenant/settings/branding` (FormData with `file` + `type`). Logo displays in AdminSidebar, login page, and member dashboard header. Favicon is set in the tenant layout metadata. Images stored via Vercel Blob (prod) or `public/uploads/` (dev).
 
 **Live theme preview**: The settings form (`SettingsForm.tsx`) imports `generateTenantCSS()` on the client and injects a `<style>` tag on every change, so theme edits are visible instantly without saving. Color fields for success/warning include preset buttons.
 
@@ -97,7 +97,7 @@ Seed tenants for testing: `dev-gym` (dark + purple), `green-gym` (light + green)
 
 ### Timezone Handling
 
-Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"America/Mexico_City"`). Default: `"America/Mexico_City"`. Configurable via Admin → Settings → "Información general".
+Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"America/Mexico_City"`). Default: `"America/Mexico_City"`. Configurable via Admin → Settings → General tab.
 
 **Centralized utility** at `src/lib/timezone.ts` — zero dependencies, uses `Intl.DateTimeFormat`:
 - `getDayBoundsUTC(tz)` — returns `{ start, end }` as UTC Dates for "today" in the gym's timezone. Used in check-in duplicate detection.
@@ -179,7 +179,7 @@ The cron runs `processMemberBilling()` which handles 3 cases in order:
 **Billing settings** per tenant (`TenantSettings.billing`):
 - `graceDays` (default: 0) — days after period start before marking as PAST_DUE. Baked into `invoice.dueAt` at creation.
 - `autoCancelDays` (default: 0, 0 = never) — days in PAST_DUE before auto-canceling.
-- Configurable via Admin → Settings → "Facturación" section (OWNER only).
+- Configurable via Admin → Settings → Negocio tab (OWNER only).
 
 **Payment reactivation**: When a PAST_DUE member pays fully, the subscription reactivates with `billingEndsAt` extended from the **previous** end date (not the payment date), so members don't benefit from paying late.
 

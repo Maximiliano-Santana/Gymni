@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { generateTenantCSS } from "@/features/tenants/server/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -311,188 +312,197 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   }
 
   return (
-    <div className="max-w-xl space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Información general</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Nombre del gym</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <Label>Dirección</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
-          </div>
-          <div>
-            <Label>Zona horaria</Label>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+    <Tabs defaultValue="general" className="max-w-xl">
+      <TabsList variant="line">
+        <TabsTrigger value="general">General</TabsTrigger>
+        <TabsTrigger value="marca">Marca</TabsTrigger>
+        <TabsTrigger value="negocio">Negocio</TabsTrigger>
+      </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Marca</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <BrandingUpload
-            label="Logo"
-            description="Se muestra en el sidebar, login y dashboard. Recomendado: PNG transparente."
-            imageUrl={logoUrl}
-            type="logo"
-            onUploaded={(url) => { setLogoUrl(url); router.refresh(); }}
-            onDeleted={() => { setLogoUrl(null); router.refresh(); }}
-          />
-          <BrandingUpload
-            label="Favicon"
-            description="Icono de la pestaña del navegador. Recomendado: cuadrado, 128×128px."
-            imageUrl={faviconUrl}
-            type="favicon"
-            onUploaded={(url) => { setFaviconUrl(url); router.refresh(); }}
-            onDeleted={() => { setFaviconUrl(null); router.refresh(); }}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tema</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Modo oscuro</Label>
-            <Switch
-              checked={mode === "dark"}
-              onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
-            />
-          </div>
-          <ColorField
-            label="Color primario"
-            value={primaryColor}
-            onChange={setPrimaryColor}
-            placeholder="#e86c00"
-          />
-          <ColorField
-            label="Base de grises"
-            description="Color base para la escala de grises de la interfaz"
-            value={grayBase}
-            onChange={setGrayBase}
-            placeholder="#545454"
-          />
-          <ColorField
-            label="Color de éxito"
-            value={successColor}
-            onChange={setSuccessColor}
-            placeholder="#2db224"
-            presets={[
-              { color: "#22c55e", label: "Verde" },
-              { color: "#2db224", label: "Verde oscuro" },
-              { color: "#10b981", label: "Esmeralda" },
-              { color: "#06b6d4", label: "Cyan" },
-              { color: "#3b82f6", label: "Azul" },
-            ]}
-          />
-          <ColorField
-            label="Color de advertencia"
-            value={warningColor}
-            onChange={setWarningColor}
-            placeholder="#eb7b7b"
-            presets={[
-              { color: "#ef4444", label: "Rojo" },
-              { color: "#f87171", label: "Rojo claro" },
-              { color: "#eb7b7b", label: "Coral" },
-              { color: "#f59e0b", label: "Ámbar" },
-              { color: "#f97316", label: "Naranja" },
-            ]}
-          />
-          <div>
-            <Label>Bordes redondeados</Label>
-            <Select value={borderRadius} onValueChange={setBorderRadius}>
-              <SelectTrigger className="max-w-48 mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0rem">Cuadrado</SelectItem>
-                <SelectItem value="0.25rem">Sutil</SelectItem>
-                <SelectItem value="0.5rem">Medio</SelectItem>
-                <SelectItem value="0.75rem">Redondeado</SelectItem>
-                <SelectItem value="1rem">Muy redondeado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Facturación</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Días de gracia</Label>
-            <p className="text-xs text-muted-foreground mb-1">
-              Días después del inicio del período para pagar antes de marcar como adeudo
-            </p>
-            <Input
-              type="number"
-              min={0}
-              max={30}
-              value={graceDays}
-              onChange={(e) => setGraceDays(Number(e.target.value))}
-              className="max-w-32"
-            />
-          </div>
-          <div>
-            <Label>Auto-cancelar después de (días)</Label>
-            <p className="text-xs text-muted-foreground mb-1">
-              Días en adeudo antes de cancelar la membresía automáticamente. 0 = nunca
-            </p>
-            <Input
-              type="number"
-              min={0}
-              max={365}
-              value={autoCancelDays}
-              onChange={(e) => setAutoCancelDays(Number(e.target.value))}
-              className="max-w-32"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Registro</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
+      <TabsContent value="general" className="space-y-6 pt-4">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
             <div>
-              <Label>Registro público de miembros</Label>
-              <p className="text-xs text-muted-foreground">
-                Permite que cualquier persona cree una cuenta desde la página de tu gimnasio
-              </p>
+              <Label>Nombre del gym</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <Switch
-              checked={allowPublicRegistration}
-              onCheckedChange={setAllowPublicRegistration}
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <div>
+              <Label>Dirección</Label>
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div>
+              <Label>Zona horaria</Label>
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <div className="flex items-center gap-3">
+      <TabsContent value="marca" className="space-y-6 pt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Imágenes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <BrandingUpload
+              label="Logo"
+              description="Se muestra en el sidebar, login y dashboard. Recomendado: PNG transparente."
+              imageUrl={logoUrl}
+              type="logo"
+              onUploaded={(url) => { setLogoUrl(url); router.refresh(); }}
+              onDeleted={() => { setLogoUrl(null); router.refresh(); }}
+            />
+            <BrandingUpload
+              label="Favicon"
+              description="Icono de la pestaña del navegador. Recomendado: cuadrado, 128×128px."
+              imageUrl={faviconUrl}
+              type="favicon"
+              onUploaded={(url) => { setFaviconUrl(url); router.refresh(); }}
+              onDeleted={() => { setFaviconUrl(null); router.refresh(); }}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tema</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Modo oscuro</Label>
+              <Switch
+                checked={mode === "dark"}
+                onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
+              />
+            </div>
+            <ColorField
+              label="Color primario"
+              value={primaryColor}
+              onChange={setPrimaryColor}
+              placeholder="#e86c00"
+            />
+            <ColorField
+              label="Base de grises"
+              description="Color base para la escala de grises de la interfaz"
+              value={grayBase}
+              onChange={setGrayBase}
+              placeholder="#545454"
+            />
+            <ColorField
+              label="Color de éxito"
+              value={successColor}
+              onChange={setSuccessColor}
+              placeholder="#2db224"
+              presets={[
+                { color: "#22c55e", label: "Verde" },
+                { color: "#2db224", label: "Verde oscuro" },
+                { color: "#10b981", label: "Esmeralda" },
+                { color: "#06b6d4", label: "Cyan" },
+                { color: "#3b82f6", label: "Azul" },
+              ]}
+            />
+            <ColorField
+              label="Color de advertencia"
+              value={warningColor}
+              onChange={setWarningColor}
+              placeholder="#eb7b7b"
+              presets={[
+                { color: "#ef4444", label: "Rojo" },
+                { color: "#f87171", label: "Rojo claro" },
+                { color: "#eb7b7b", label: "Coral" },
+                { color: "#f59e0b", label: "Ámbar" },
+                { color: "#f97316", label: "Naranja" },
+              ]}
+            />
+            <div>
+              <Label>Bordes redondeados</Label>
+              <Select value={borderRadius} onValueChange={setBorderRadius}>
+                <SelectTrigger className="max-w-48 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0rem">Cuadrado</SelectItem>
+                  <SelectItem value="0.25rem">Sutil</SelectItem>
+                  <SelectItem value="0.5rem">Medio</SelectItem>
+                  <SelectItem value="0.75rem">Redondeado</SelectItem>
+                  <SelectItem value="1rem">Muy redondeado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="negocio" className="space-y-6 pt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Facturación</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Días de gracia</Label>
+              <p className="text-xs text-muted-foreground mb-1">
+                Días después del inicio del período para pagar antes de marcar como adeudo
+              </p>
+              <Input
+                type="number"
+                min={0}
+                max={30}
+                value={graceDays}
+                onChange={(e) => setGraceDays(Number(e.target.value))}
+                className="max-w-32"
+              />
+            </div>
+            <div>
+              <Label>Auto-cancelar después de (días)</Label>
+              <p className="text-xs text-muted-foreground mb-1">
+                Días en adeudo antes de cancelar la membresía automáticamente. 0 = nunca
+              </p>
+              <Input
+                type="number"
+                min={0}
+                max={365}
+                value={autoCancelDays}
+                onChange={(e) => setAutoCancelDays(Number(e.target.value))}
+                className="max-w-32"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Registro</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Registro público de miembros</Label>
+                <p className="text-xs text-muted-foreground">
+                  Permite que cualquier persona cree una cuenta desde la página de tu gimnasio
+                </p>
+              </div>
+              <Switch
+                checked={allowPublicRegistration}
+                onCheckedChange={setAllowPublicRegistration}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <div className="flex items-center gap-3 mt-6">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Guardando..." : "Guardar cambios"}
         </Button>
@@ -502,6 +512,6 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
           </p>
         )}
       </div>
-    </div>
+    </Tabs>
   );
 }
