@@ -24,6 +24,7 @@ export const authOptions: NextAuthOptions = {
           placeholder: "example@example.com",
         },
         password: { label: "Password", type: "password" },
+        tenantId: { label: "Tenant ID", type: "text" },
       },
       async authorize(c) {
         if (!c?.email || !c?.password) return null;
@@ -46,6 +47,15 @@ export const authOptions: NextAuthOptions = {
 
         const ok = await bcrypt.compare(String(c.password), user.password);
         if (!ok) return null;
+
+        // If logging in from a tenant subdomain, verify membership
+        if (c.tenantId) {
+          const membership = await db.tenantUser.findUnique({
+            where: { userId_tenantId: { userId: user.id, tenantId: c.tenantId } },
+            select: { id: true },
+          });
+          if (!membership) return null;
+        }
 
         return {
           id: user.id,

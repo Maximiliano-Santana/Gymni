@@ -64,7 +64,11 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
     const res = await signIn("credentials", { ...values, redirect: false });
 
     if (res?.error) {
-      form.setError("root", { message: "Correo o contraseña incorrectos" });
+      form.setError("root", {
+        message: tenant
+          ? "Credenciales incorrectas o no perteneces a este gimnasio"
+          : "Correo o contraseña incorrectos",
+      });
       return;
     }
 

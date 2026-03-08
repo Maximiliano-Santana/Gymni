@@ -121,7 +121,7 @@ Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"Amer
 
 ### Auth (NextAuth v4, JWT strategy)
 
-Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-exported by `src/app/api/auth/[...nextauth]/route.ts`. NextAuth route files can only export HTTP handlers — never put `authOptions` or other non-handler exports in route files. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
+Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-exported by `src/app/api/auth/[...nextauth]/route.ts`. NextAuth route files can only export HTTP handlers — never put `authOptions` or other non-handler exports in route files. The credentials provider accepts `tenantId` — when present, it verifies the user has a `TenantUser` record before authenticating (non-members get rejected at login). On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
 
 **JWT periodic refresh**: Tenant roles are refreshed from DB every 1 hour (`tenantsRefreshedAt` timestamp in JWT) to prevent stale role caching. This means role changes (promotions, removals) take effect within 1 hour without requiring re-login.
 
