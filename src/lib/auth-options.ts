@@ -179,6 +179,7 @@ export const authOptions: NextAuthOptions = {
         }
         token.picture = user.image ?? undefined;
         token.tenants = await getTenantsBySubdomain(user.id);
+        token.tenantsRefreshedAt = Date.now();
       }
 
       // TODO: Remove after 2026-04-07 — backfill for JWTs created before email verification (deployed 2026-03-07)
@@ -188,6 +189,14 @@ export const authOptions: NextAuthOptions = {
           select: { emailVerified: true },
         });
         token.emailVerified = !!dbUser?.emailVerified;
+      }
+
+      // Periodic tenant roles refresh (every 5 min) to prevent stale JWT roles
+      const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+      const lastRefresh = (token.tenantsRefreshedAt as number) ?? 0;
+      if (token.sub && Date.now() - lastRefresh > REFRESH_INTERVAL_MS) {
+        token.tenants = await getTenantsBySubdomain(token.sub);
+        token.tenantsRefreshedAt = Date.now();
       }
 
       // Allow client-side refresh: useSession().update({ refreshTenants: true })

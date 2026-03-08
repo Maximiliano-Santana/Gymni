@@ -25,10 +25,24 @@ export async function POST(req: NextRequest) {
       return Response.json({ message: "Campos invalidos" }, { status: 400 });
     }
 
-    //Validacio de que el tenant existe
+    // Use tenantId from JWT (not body) to prevent cross-tenant attacks
+    newInvitation.tenantId = isAllowed.tenantId;
+
+    // Validate role assignment permissions: OWNER can assign OWNER/ADMIN/STAFF, ADMIN can only assign STAFF
+    const isOwner = isAllowed.roles.includes("OWNER");
+    const canAssign = isOwner
+      ? ["OWNER", "ADMIN", "STAFF"].includes(newInvitation.role)
+      : newInvitation.role === "STAFF";
+    if (!canAssign) {
+      return NextResponse.json(
+        { message: "No tienes permisos para asignar este rol" },
+        { status: 403 }
+      );
+    }
+
     const tenant = await db.tenant.findUnique({
       where: {
-        id: newInvitation.tenantId,
+        id: isAllowed.tenantId,
       },
     });
 

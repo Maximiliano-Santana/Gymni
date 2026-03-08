@@ -36,8 +36,7 @@ export type LoginDTO = z.infer<typeof LoginSchema>;
 
 export const InvitationSchema = z.object({
   email: z.string().email("Correo inválido").nonempty("Campo obligatorio"),
-  tenantId: z.string(),
   role: z.nativeEnum(TenantRole)
 })
 
-export type InvitationDTO = z.infer<typeof InvitationSchema>
+export type InvitationDTO = z.infer<typeof InvitationSchema> & { tenantId: string }

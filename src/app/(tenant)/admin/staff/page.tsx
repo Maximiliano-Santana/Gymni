@@ -41,7 +41,7 @@ export default async function StaffPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Staff</h1>
-      <StaffTable initialStaff={staffData} userRoles={roles} tenantId={tenantId} />
+      <StaffTable initialStaff={staffData} userRoles={roles} />
     </div>
   );
 }
