@@ -29,6 +29,7 @@ type SettingsData = {
   borderRadius: string;
   graceDays: number;
   autoCancelDays: number;
+  allowPublicRegistration: boolean;
   logoUrl: string | null;
   faviconUrl: string | null;
 };
@@ -243,6 +244,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const [borderRadius, setBorderRadius] = useState(initialData.borderRadius);
   const [graceDays, setGraceDays] = useState(initialData.graceDays);
   const [autoCancelDays, setAutoCancelDays] = useState(initialData.autoCancelDays);
+  const [allowPublicRegistration, setAllowPublicRegistration] = useState(initialData.allowPublicRegistration);
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl);
   const [faviconUrl, setFaviconUrl] = useState(initialData.faviconUrl);
   const [saving, setSaving] = useState(false);
@@ -292,6 +294,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
             },
             layout: { borderRadius: { base: borderRadius } },
             billing: { graceDays, autoCancelDays },
+            allowPublicRegistration,
           },
         }),
       });
@@ -464,6 +467,26 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               value={autoCancelDays}
               onChange={(e) => setAutoCancelDays(Number(e.target.value))}
               className="max-w-32"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Registro</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Registro público de miembros</Label>
+              <p className="text-xs text-muted-foreground">
+                Permite que cualquier persona cree una cuenta desde la página de tu gimnasio
+              </p>
+            </div>
+            <Switch
+              checked={allowPublicRegistration}
+              onCheckedChange={setAllowPublicRegistration}
             />
           </div>
         </CardContent>

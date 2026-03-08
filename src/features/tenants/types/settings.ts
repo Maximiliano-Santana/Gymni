@@ -58,4 +58,7 @@ export interface TenantSettings {
 
   /** IANA timezone, e.g. "America/Mexico_City" */
   timezone?: string;
+
+  /** Allow members to self-register on the tenant subdomain without an invitation. Default: false. */
+  allowPublicRegistration?: boolean;
 }

@@ -9,6 +9,7 @@ import { sendEmail } from "@/lib/email";
 import WelcomeEmail from "@/emails/WelcomeEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
 import { rateLimiters, getClientIp, checkRateLimit } from "@/lib/rate-limit";
+import type { TenantSettings } from "@/features/tenants/types/settings";
 
 async function sendVerificationEmail(email: string, origin: string) {
   // Delete previous verification tokens
@@ -213,8 +214,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  //Si hay tenant se crea/actualiza relación
+  //Si hay tenant se crea/actualiza relación (registro público)
   if (tenant && !invitation) {
+    // Check if tenant allows public registration
+    const tenantSettings = tenant.settings as TenantSettings | null;
+    if (!tenantSettings?.allowPublicRegistration) {
+      return NextResponse.json(
+        { message: "Este gimnasio no permite registro público. Acércate a recepción para crear tu cuenta." },
+        { status: 403 }
+      );
+    }
     //Valida existencia de relación
     const tenantUser = await db.tenantUser.findUnique({
       where: {

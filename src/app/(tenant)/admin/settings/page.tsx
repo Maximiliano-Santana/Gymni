@@ -48,6 +48,7 @@ export default async function SettingsPage() {
           borderRadius: layout.borderRadius?.base ?? "0.5rem",
           graceDays: billing.graceDays ?? 0,
           autoCancelDays: billing.autoCancelDays ?? 0,
+          allowPublicRegistration: (settings.allowPublicRegistration as boolean) ?? false,
           logoUrl: logo?.light ?? null,
           faviconUrl: (assets.favicon as string) ?? null,
         }}

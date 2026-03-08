@@ -54,6 +54,7 @@ const PatchSchema = z.object({
           autoCancelDays: z.number().int().min(0).max(365).optional(),
         })
         .optional(),
+      allowPublicRegistration: z.boolean().optional(),
     })
     .optional(),
 });
@@ -104,6 +105,9 @@ export async function PATCH(request: Request) {
                   ...settings.billing,
                 },
               }
+            : {}),
+          ...(settings.allowPublicRegistration !== undefined
+            ? { allowPublicRegistration: settings.allowPublicRegistration }
             : {}),
         }
       : undefined;
