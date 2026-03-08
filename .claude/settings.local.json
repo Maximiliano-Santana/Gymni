@@ -19,7 +19,8 @@
       "WebFetch(domain:precios.fitcolatam.com)",
       "WebFetch(domain:www.fitcolatam.com)",
       "WebFetch(domain:www.crossfyapp.com)",
-      "WebFetch(domain:business.crosshero.com)"
+      "WebFetch(domain:business.crosshero.com)",
+      "Bash(node -e \":*)"
     ]
   }
 }
