@@ -52,7 +52,7 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 
 `src/middleware.ts` enforces five layers of protection:
 - **`isProtected`** — `/dashboard`, `/admin`, `/app`, `/api/protected` require authentication (redirects to `/login`).
-- **Email verification gate** — Protected routes (except `/api/`) require `emailVerified` on the JWT. Unverified users are redirected to `/verify-email`.
+- **Email verification gate** — Protected routes require `emailVerified` on the JWT. Unverified users hitting pages are redirected to `/verify-email`; unverified API calls (except `/api/auth/*`) get `403`. The `/api/auth/` prefix is whitelisted so login, register, and verify-email endpoints still work.
 - **`isTenantOnly`** — `/dashboard`, `/admin` are blocked on the root domain (redirects to `/app`).
 - **`isPlatformOnly`** — `/app` is blocked on tenant subdomains (redirects to `/dashboard`).
 - **Subdomain root** — `/` on a tenant subdomain redirects based on role: staff (OWNER/ADMIN/STAFF) → `/admin`, members → `/dashboard`, unauthenticated → `/login`. No marketing page on subdomains.
@@ -61,7 +61,7 @@ The tenant layout (`src/app/(tenant)/layout.tsx`) calls `validateTenantSubdomain
 
 Admin routes use **server component layouts** for role checks (no client-side flash):
 - `src/app/(tenant)/admin/layout.tsx` — checks `isStaffRole()`, redirects non-staff to `/dashboard`.
-- `src/app/(tenant)/(user)/layout.tsx` — checks tenant membership, redirects non-members to `/login`.
+- `src/app/(tenant)/(user)/layout.tsx` — checks tenant membership + requires MEMBER role, redirects non-members to `/admin` (staff without MEMBER role can't access member dashboard).
 - Individual admin pages check granular permissions via `canAccess(page, roles)` from `src/features/admin/lib/permissions.ts`.
 
 **Permission matrix** (`ADMIN_PAGES`):
@@ -123,6 +123,11 @@ Each tenant has a `timezone` field in `TenantSettings` (IANA format, e.g. `"Amer
 
 Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-exported by `src/app/api/auth/[...nextauth]/route.ts`. NextAuth route files can only export HTTP handlers — never put `authOptions` or other non-handler exports in route files. On login, the JWT callback fetches all tenants the user belongs to and stores them as `token.tenants: Record<subdomain, { tenantId, roles[] }>`. This map is exposed on `session.user.tenants`. A custom `redirect` callback allows callbackUrls on tenant subdomains (needed for logout to stay on the subdomain).
 
+**JWT periodic refresh**: Tenant roles are refreshed from DB every 1 hour (`tenantsRefreshedAt` timestamp in JWT) to prevent stale role caching. This means role changes (promotions, removals) take effect within 1 hour without requiring re-login.
+
+**JWT backfill**: `emailVerified` field was added to JWTs on 2026-03-07. Old sessions without it get a one-time DB lookup to populate the field.
+<!-- TODO: Remove emailVerified backfill after 2026-04-07 — all old JWTs will have expired by then -->
+
 **Email verification** (`src/app/api/auth/verify-email/route.ts`):
 - Self-registered users start with `emailVerified: null` → blocked from protected routes until verified.
 - Verification email is Gymni-branded (not tenant-branded) — it's a platform-level identity check.
@@ -143,6 +148,8 @@ Config lives in `src/lib/auth-options.ts` (exported as `authOptions`), re-export
 - If invitee already has an account → directly adds/updates TenantUser with the role + auto-verifies email if null.
 - If invitee doesn't exist → creates an `Invitation` record (30-day expiry). Registration with `?invitation=<id>` in the URL consumes it.
 - The invitation token acts as a security measure — knowing the email alone isn't enough to claim a role.
+- **Security**: `tenantId` is always taken from the JWT (via `requireTenantRoles()`), never from the request body — prevents cross-tenant escalation.
+- **Role assignment validation**: OWNER can assign OWNER/ADMIN/STAFF; ADMIN can only assign STAFF. Prevents privilege escalation.
 
 **API authorization helpers** in `src/app/api/lib/validation.ts`:
 - `requireTenantRoles(needed[])` — reads tenant from JWT (no DB hit), checks roles. Use this in most API routes.
@@ -191,7 +198,7 @@ src/app/
     app/                # User's gym list (/app)
   (tenant)/
     layout.tsx          # Resolves tenant, injects theme + providers
-    (auth)/             # /login, /register
+    (auth)/             # /login, /register, /verify-email
     (user)/             # Member-facing dashboard
     admin/              # Gym admin panel (sidebar layout)
       checkin/            # QR scanner + manual search check-in
@@ -200,7 +207,7 @@ src/app/
       plans/            # Membership plans
       settings/         # Gym configuration
   api/
-    auth/               # NextAuth + register + invitation
+    auth/               # NextAuth + register + invitation + verify-email + login-check
     tenants/            # CRUD, theme CSS, subscription, payment
     tenant/             # Tenant-scoped admin APIs
       checkin/          # lookup (QR), search (name/email), confirm
@@ -241,15 +248,33 @@ Seed data (`prisma/seed.js`): 2 tenants (dev-gym, green-gym), 2 owners, 1 platfo
 
 Dev-gym has `billing: { graceDays: 3, autoCancelDays: 30 }` configured. All member passwords: `tashamaria123*d`.
 
+### Rate Limiting (`src/lib/rate-limit.ts`)
+
+Uses **Upstash Redis** (`@upstash/ratelimit` + `@upstash/redis`) — serverless, HTTP-based, Edge-compatible.
+
+**Limiters** (sliding window):
+| Endpoint | Limit | Window | Key |
+|----------|-------|--------|-----|
+| Login | 5 | 15 min | IP |
+| Register | 3 | 1 hr | IP |
+| Forgot password | 3 | 1 hr | IP |
+| Verify email resend | 3 | 1 hr | email |
+| Invitation | 10 | 1 hr | tenantId |
+
+**Login rate limit workaround**: NextAuth's `signIn()` doesn't propagate middleware HTTP status codes to the client. Solution: `LoginForm` calls `POST /api/auth/login-check` (pre-check endpoint) before `signIn()`. If rate limited, the 429 response is caught and displayed as a form error.
+
+**Env vars required**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (must be added to Vercel).
+
 ### Email Notifications (`src/emails/` + `src/lib/email.ts`)
 
-Uses **Resend** with React Email components. `sendEmail()` gracefully skips if `RESEND_API_KEY` is not set and ignores test email domains.
+Uses **Resend** with React Email components. `sendEmail()` gracefully skips if `RESEND_API_KEY` is not set and ignores test email domains. Production sender: `noreply@mail.gymni.mx`.
 
 **Templates**:
 - `WelcomeEmail` — sent when adding a member. Includes temp password + login URL + change password link for new users, or just a welcome message for existing users added to a gym.
 - `InvitationEmail` — staff invitation with registration link.
 - `PaymentDueEmail` — sent by billing cron when subscription becomes PAST_DUE.
 - `MembershipCanceledEmail` — sent by billing cron on auto-cancellation.
+- `VerifyEmail` — email verification link (platform-branded, not tenant-branded).
 - `PasswordResetEmail` — forgot password flow.
 
 ### Members Query Builder (`src/features/members/server/queries.ts`)
@@ -269,6 +294,7 @@ Shared `queryMembers({ tenantId, search, status, page })` used by both the page 
 - **Cron**: Vercel Crons — billing runs daily at 6am UTC (`vercel.json`)
 - **Domain**: `gymni.mx` + `*.gymni.mx` (wildcard for tenant subdomains). DNS via Vercel nameservers.
 - **Build**: `prisma generate && next build --turbopack` (Prisma generate needed because Vercel caches node_modules).
+- **Rate limiting**: Upstash Redis — requires `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` env vars in Vercel.
 
 ## Known WIP / Incomplete Areas
 

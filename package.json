@@ -23,6 +23,8 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.3",
     "@vercel/blob": "^2.3.0",
     "@yudiel/react-qr-scanner": "^2.5.1",
     "axios": "^1.11.0",
