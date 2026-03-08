@@ -8,6 +8,7 @@ import { TenantRole } from "@prisma/client";
 import { sendEmail } from "@/lib/email";
 import WelcomeEmail from "@/emails/WelcomeEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
+import { rateLimiters, getClientIp, checkRateLimit } from "@/lib/rate-limit";
 
 async function sendVerificationEmail(email: string, origin: string) {
   // Delete previous verification tokens
@@ -34,6 +35,10 @@ async function sendVerificationEmail(email: string, origin: string) {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 3 registrations per hour per IP
+  const limited = await checkRateLimit(rateLimiters.register, getClientIp(request));
+  if (limited) return limited;
+
   //Validación de datos
   const newUser: RegisterDTO = await request.json();
   const validation = validateRequest(RegisterSchema, newUser);

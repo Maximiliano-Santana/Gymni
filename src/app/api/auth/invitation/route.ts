@@ -7,6 +7,7 @@ import { InvitationDTO, InvitationSchema } from "@/features/auth/types/forms";
 import db from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import InvitationEmail from "@/emails/InvitationEmail";
+import { rateLimiters, checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,6 +25,10 @@ export async function POST(req: NextRequest) {
     if (!validation.success) {
       return Response.json({ message: "Campos invalidos" }, { status: 400 });
     }
+
+    // Rate limit: 10 invitations per hour per tenant
+    const limited = await checkRateLimit(rateLimiters.invitation, isAllowed.tenantId);
+    if (limited) return limited;
 
     // Use tenantId from JWT (not body) to prevent cross-tenant attacks
     newInvitation.tenantId = isAllowed.tenantId;

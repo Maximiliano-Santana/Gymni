@@ -3,9 +3,14 @@ import db from "@/lib/prisma";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/email";
 import PasswordResetEmail from "@/emails/PasswordResetEmail";
+import { rateLimiters, getClientIp, checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 3 per hour per IP
+    const limited = await checkRateLimit(rateLimiters.forgotPassword, getClientIp(req));
+    if (limited) return limited;
+
     const { email } = await req.json();
 
     if (!email || typeof email !== "string") {

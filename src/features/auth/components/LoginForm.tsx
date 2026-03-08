@@ -53,6 +53,14 @@ export default function LoginForm({ tenant }: { tenant: TenantTyped | null }) {
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(values: LoginDTO) {
+    // Pre-check rate limit before attempting login
+    const rlCheck = await fetch("/api/auth/login-check", { method: "POST" });
+    if (rlCheck.status === 429) {
+      const data = await rlCheck.json();
+      form.setError("root", { message: data.message });
+      return;
+    }
+
     const res = await signIn("credentials", { ...values, redirect: false });
 
     if (res?.error) {

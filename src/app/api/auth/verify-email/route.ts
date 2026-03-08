@@ -3,6 +3,7 @@ import db from "@/lib/prisma";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/email";
 import VerifyEmail from "@/emails/VerifyEmail";
+import { rateLimiters, getClientIp, checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,9 @@ export async function POST(req: NextRequest) {
 
     // Resend verification email
     if (resend) {
+      // Rate limit resend: 3 per hour per email
+      const limited = await checkRateLimit(rateLimiters.verifyEmail, normalized);
+      if (limited) return limited;
       const user = await db.user.findUnique({
         where: { email: normalized },
         select: { emailVerified: true },
