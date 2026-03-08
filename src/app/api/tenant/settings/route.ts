@@ -39,7 +39,13 @@ const PatchSchema = z.object({
         .optional(),
       layout: z
         .object({
-          borderRadius: z.object({ base: z.string().optional() }).optional(),
+          borderRadius: z
+            .object({
+              base: z
+                .enum(["0rem", "0.25rem", "0.5rem", "0.75rem", "1rem"])
+                .optional(),
+            })
+            .optional(),
         })
         .optional(),
       billing: z

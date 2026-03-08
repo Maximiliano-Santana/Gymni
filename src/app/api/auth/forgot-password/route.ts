@@ -32,7 +32,11 @@ export async function POST(req: NextRequest) {
       where: { email: normalizedEmail },
     });
 
-    if (!user) return successResponse;
+    if (!user) {
+      // Consistent timing: wait similar to the email-sending path to prevent enumeration
+      await new Promise((r) => setTimeout(r, 150 + Math.random() * 100));
+      return successResponse;
+    }
 
     // Delete previous tokens for this email
     await db.verificationToken.deleteMany({

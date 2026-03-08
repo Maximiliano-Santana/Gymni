@@ -227,6 +227,10 @@ export const authOptions: NextAuthOptions = {
       const base = new URL(baseUrl);
       try {
         const target = new URL(url);
+        // Block non-http(s) protocols (javascript:, data:, etc.)
+        if (target.protocol !== "http:" && target.protocol !== "https:") {
+          return baseUrl;
+        }
         const baseParts = base.hostname.split(".");
         const targetParts = target.hostname.split(".");
         // Same host or subdomain of base (e.g. acme.localhost vs localhost)
