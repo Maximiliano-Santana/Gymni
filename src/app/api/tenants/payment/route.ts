@@ -9,7 +9,7 @@ import db from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     //Validacion de permisos y campos para registrar pago
-    const isAllowed = await requireTenantRoles([]);
+    const isAllowed = await requireTenantRoles(["OWNER"]);
     if (!isAllowed) {
       return Response.json(
         { message: "No tienes permisos para hacer esto" },
@@ -25,10 +25,11 @@ export async function POST(req: Request) {
         { status: 400 }
       );
 
+    // Use tenantId from JWT, not body
     //Validación de suscripción activa
     const subscription = await db.subscription.findFirst({
       where: {
-        tenantId: payment.tenantId,
+        tenantId: isAllowed.tenantId,
         status: "active",
       },
       select: {
@@ -101,8 +102,9 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
+    console.error("[payment]", e);
     return NextResponse.json(
-      { message: e.message ?? "Error al registrar pago." },
+      { message: "Error al registrar pago." },
       { status: 400 }
     );
   }

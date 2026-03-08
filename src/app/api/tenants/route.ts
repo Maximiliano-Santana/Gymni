@@ -8,11 +8,7 @@ import {
 import { DEFAULT_TENANT_SETTINGS } from "@/features/tenants/lib/default-settings";
 import { Prisma } from "@prisma/client";
 
-// Handle GET requests
-export async function GET(request: Request) {
-  const tenants = await db.tenant.findMany();
-  return NextResponse.json(tenants);
-}
+// GET removed — was exposing all tenants without auth
 
 export async function POST(request: Request) {
   try {
@@ -64,7 +60,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: "No se pudo crear el tenant" },
+      { message: "No se pudo crear el tenant" },
       { status: 500 }
     );
   }

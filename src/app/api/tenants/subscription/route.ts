@@ -175,7 +175,7 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     return NextResponse.json(
-      { message: "Ocurió un error al iniciar suscripción", error: err },
+      { message: "Ocurrió un error al iniciar suscripción" },
       { status: 500 }
     );
   }

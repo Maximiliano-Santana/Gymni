@@ -71,8 +71,13 @@ export default async function middleware(req: NextRequest) {
       const url = new URL("/login", req.url);
       return NextResponse.redirect(url);
     }
-    // Email verification gate (skip API routes — they're programmatic)
-    if (!token.emailVerified && !pathname.startsWith("/api/")) {
+    // Email verification gate — skip only auth-related APIs (login, register, verify-email)
+    const emailVerifyWhitelist = ["/api/auth/"];
+    const isWhitelisted = emailVerifyWhitelist.some((p) => pathname.startsWith(p));
+    if (!token.emailVerified && !isWhitelisted) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "Email no verificado" }, { status: 403 });
+      }
       return NextResponse.redirect(new URL("/verify-email", req.url));
     }
   }

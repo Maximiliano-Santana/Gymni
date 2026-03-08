@@ -145,12 +145,13 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("[invitation email]", err));
 
     return Response.json(
-      { message: "Invitación enviada", invitation },
+      { message: "Invitación enviada", invitation: { id: invitation.id } },
       { status: 200 }
     );
   } catch (err) {
+    console.error("[invitation]", err);
     return NextResponse.json(
-      { message: "Ocurrió un error en Crear invitation", error: err },
+      { message: "Ocurrió un error" },
       { status: 500 }
     );
   }
